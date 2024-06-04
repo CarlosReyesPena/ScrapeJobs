@@ -1,0 +1,105 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc} % Ajouté pour éviter les problèmes d'encodage avec le français
+\usepackage{graphicx}
+\usepackage[margin=1in, bottom=0.5in]{geometry}
+\usepackage{lipsum}
+\usepackage{tabto}
+\usepackage[french]{babel}
+\usepackage{helvet} % Ajouté pour utiliser la police Helvetica
+\renewcommand{\familydefault}{\sfdefault} % Définit Helvetica comme police par défaut
+
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{\baselineskip}
+\pagestyle{empty}% Remove any headers/footers
+
+% Nouvelle commande pour lire un fichier texte et échapper les caractères spéciaux
+\newcommand{\readtextfile}[1]{%
+    \begingroup
+    \catcode`\#=12 % Make # a non-special character
+    \catcode`\$=12 % Make $ a non-special character
+    \catcode`\_=12 % Make _ a non-special character
+    \catcode`\&=12 % Make & a non-special character
+    \catcode`\~=12 % Make ~ a non-special character
+    \catcode`\%=12 % Make % a non-special character
+    \catcode`\^=12 % Make ^ a non-special character
+    \input{#1}%
+    \endgroup
+}
+
+\begin{document}
+\sffamily% Default font for this letter
+
+\newcommand{\readdestfile}[1]{
+    \newread\file
+    \openin\file=#1
+    \begingroup
+    \obeylines
+    \everypar{\tabto{30em}}
+    \catcode`\#=12 % Make # a non-special character
+    \catcode`\$=12 % Make $ a non-special character
+    \catcode`\_=12 % Make _ a non-special character
+    \catcode`\&=12 % Make & a non-special character
+    \catcode`\~=12 % Make ~ a non-special character
+    \catcode`\%=12 % Make % a non-special character
+    \catcode`\^=12 % Make ^ a non-special character
+    \loop\unless\ifeof\file
+        \read\file to \line
+        \ifeof\file\else\line\par\fi
+    \repeat
+    \closein\file
+    \endgroup
+}
+
+% Information de l'expéditeur et date sur la même ligne
+Carlos Antonio Reyes Peña \\
+Av. C.-F.- Ramuz 3 \tabto{30em} Pully, le \today \\
+1009 Pully \\
+Téléphone : 078 914 93 64 \\
+carlosantonio.reyespena@gmail.com
+
+
+
+% Information du destinataire avec tabulation
+
+\begingroup
+\parskip=0pt % Remove additional space between paragraphs within this group
+\readdestfile{Compilation/destinataire.txt}
+\endgroup
+
+\bigskip
+\bigskip
+\bigskip
+
+
+% Sujet
+\vspace*{0.6in} % Ajustez cet espace pour positionner le sujet à la hauteur désirée
+\textbf{\input{Compilation/sujet.txt}}
+\vspace{0.1\baselineskip} % Ajustez l'espace entre le sujet et la ligne
+\hrule height 0.5pt % Ajustez l'épaisseur de la ligne
+
+
+
+% Contenu de la lettre
+\readtextfile{Compilation/corp.txt} % Utiliser la nouvelle commande
+
+
+\bigskip
+\bigskip
+
+
+\tabto{30em} Carlos Antonio Reyes Peña
+\bigskip
+
+% Signature
+\tabto{30em}\includegraphics[height=2.5\baselineskip]{signature.png} % Remplacez par l'image de votre signature si vous en avez une
+
+\vfill % Pushes the following content to the bottom
+
+\begin{minipage}[t]{\textwidth}
+\textit{Annexes: CV, diplômes et certificats de travail}
+\end{minipage}
+
+\end{document}

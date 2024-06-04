@@ -1,0 +1,42 @@
+# Instructions for Creating the Body of a Cover Letter
+
+## Company Information
+- Company Summary: {company_info["summary"]}
+
+## Personal Information
+{profile.txt}
+
+## Response Guidelines
+
+1. Create the body of the cover letter following this structure:
+   - **Introduction**: Start with an appropriate greeting ("Madame, Monsieur" in French, "Dear Madam/Sir," in English or the equivalent in {language}). Briefly mention your current situation and express your interest in the company.
+   - **Motivation and Interest in the Company**: Explain why you are interested in this company. Mention specific aspects that attract you.
+   - **Relevant Skills and Experiences**: Describe your most relevant skills and experiences for the position.
+   - **Contribution to the Company**: Explain how you can contribute to the company with your skills and experiences.
+   - **Conclusion**: End with a sentence showing your availability for an interview and thank the recruiters. Close with an appropriate salutation ("I look forward to your response and remain, Madam, Sir, sincerely yours." or the equivalent in {language}).
+2. The response must be in {language}.
+3. Respond only with the body text. 
+4. You MUST avoid any introductions like "Here is the body of the cover letter:" or similar phrases.
+
+
+## Example
+### Company Information
+- Company Summary: A leading company specializing in developing innovative technological solutions.
+
+### Personal Information
+John Doe, a seasoned software engineer with a passion for technology and innovation.
+
+### Expected Response
+Dear Madam/Sir
+
+I am writing to express my interest in joining Tech Innovators. With over 10 years of experience in software engineering and a deep passion for technology, I am excited about the opportunity to contribute to your innovative projects.
+
+Tech Innovators' commitment to developing cutting-edge solutions resonates with my professional aspirations. I am particularly impressed by your recent project on AI-driven technologies, which aligns perfectly with my background and interests.
+
+In my previous role at Tech Solutions, I led a team to develop a highly efficient software platform that increased productivity by 30%. My expertise in various programming languages, combined with my problem-solving skills, makes me confident in my ability to add significant value to your team.
+
+I am eager to bring my skills and experiences to Tech Innovators and help drive your innovative projects to new heights. I am available for an interview at your earliest convenience and look forward to discussing how I can contribute to your team.
+
+I look forward to your response and remain, Madam, Sir, sincerely yours.
+
+

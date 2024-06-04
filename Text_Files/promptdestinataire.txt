@@ -1,0 +1,48 @@
+# Instructions for Creating Recipient Information
+
+## Response Guidelines
+
+1. Create the recipient information using the elements provided above.
+2. Provide only the recipient information; any additional indications are prohibited.
+3. Avoid introductions such as "Here are the recipient information created according to the guidelines:".
+4. The structure of the recipient information should include the following elements:
+    - Company Name: {company_info["name"]}.
+    - Full Name: If the first name and last name can be extracted from {company_info["mails"]}, use them. Otherwise, use the equivalent to "To whom it may concern" in {language}.
+    - Company Address: Choose one address from {company_info["addresses"]} and include it, ensuring each part of the address is on a separate line.
+
+5. The response must be in {language}.
+6. Respond only with the text that will be read directly in the letter, ensuring each part of the address is on a separate line.
+
+
+## Example
+### Company Information
+- Company Name: Tech Innovators
+- Email Addresses: hr@techinnovators.com, info@techinnovators.com
+- Company Addresses: 123 Innovation Drive, Tech City; 456 Tech Park, Innovate Town
+
+### Expected Response
+Tech Innovators  
+To whom it may concern  
+123 Innovation Drive  
+Tech City
+
+## Example (French)
+### Company Information
+- Company Name: Innovateurs Tech
+- Email Addresses: recrutement@innovateurstech.com, info@innovateurstech.com
+- Company Addresses: 123 Rue de l'Innovation, Ville Tech; 789 Parc Technologique, Innovation Ville
+- Language: French
+
+### Expected Response
+Innovateurs Tech  
+À qui de droit  
+123 Rue de l'Innovation  
+Ville Tech
+
+## Reminder / Important
+- Always follow the guidelines and provide precise and relevant responses.
+- Ensure the response does not contain any elements that could cause LaTeX compilation errors.
+
+## Compliance Check
+- Ensure the response strictly follows the above guidelines.
+- If deviations are found, write @DeviationFound.
