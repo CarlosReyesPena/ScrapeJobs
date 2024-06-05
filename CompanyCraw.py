@@ -32,22 +32,63 @@ def load_keywords(json_file_path='Json_Files/keywords.json'):
     return keywords_cat1, keywords_cat2
 
 
+# Fonction pour logger les résultats
+def log_extraction(function_name, input_text, result):
+    # Crée le dossier de logs s'il n'existe pas
+    log_dir = f'logs/{function_name}'
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Compte le nombre de fichiers existants pour déterminer le prochain numéro de fichier
+    existing_logs = len(os.listdir(log_dir))
+    log_file_path = os.path.join(log_dir, f'log_{existing_logs + 1}.txt')
+    
+    with open(log_file_path, 'w', encoding='utf-8') as file:
+        file.write("Input Text:\n")
+        file.write(input_text + "\n\n")
+        file.write("Result:\n")
+        file.write(str(result) + "\n")
+
 # Fonction pour extraire les e-mails d'une page HTML
 def extract_emails_with_context(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
-    visible_text = soup.get_text(separator=' ', strip=True)
+    visible_text = soup.get_text(separator='\n', strip=True)  # Conserver les lignes
     
     email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
     emails = []
     
     for match in re.finditer(email_pattern, visible_text):
         email = match.group()
-        start = max(match.start() - 200, 0)
-        end = min(match.end() + 200, len(visible_text))
+        start = max(match.start() - 500, 0)
+        end = min(match.end() + 500, len(visible_text))
         context = visible_text[start:end]
         emails.append((email, context))
+        
+        # Log the extraction
+        log_extraction('html_content', html_content, (email, context))
+        log_extraction('extract_emails_with_context', visible_text, (email, context))
     
     return emails
+
+# Fonction pour logger les résultats
+def log_extraction(function_name, input_text, result):
+    # Crée le dossier de logs s'il n'existe pas
+    log_dir = f'logs/{function_name}'
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Compte le nombre de fichiers existants pour déterminer le prochain numéro de fichier
+    existing_logs = len(os.listdir(log_dir))
+    log_file_path = os.path.join(log_dir, f'log_{existing_logs + 1}.txt')
+    
+    with open(log_file_path, 'w', encoding='utf-8') as file:
+        file.write("Input Text:\n")
+        file.write(input_text + "\n\n")
+        file.write("Result:\n")
+        file.write(str(result) + "\n")
+
+# Exemple d'utilisation
+# html_content = "<html>...</html>"
+# result = extract_emails_with_context(html_content)
+
 
 # Fonction pour récupérer le contenu d'une page web
 def fetch_page(url):
@@ -137,7 +178,7 @@ def extract_information(context):
             },
             {
                 "role": "user",
-                "content": f"From the following text: {context}, extract the physical addresses and person names. Do not include any post office boxes (e.g., 'Case postale' or 'P.O. Box'). Provide the results in the following JSON format: {{\"addresses\": [], \"names\": []}} You MUST respond only the json and only in this format."
+                "content": f"From the following text: {context}, extract the physical addresses and person names. Do not include any post office boxes. Provide the results in the following JSON format: {{\"addresses\": [], \"names\": []}}. Don't include adresses that are not related to the company. Exclude any person that is not a key figure in the company."
             }
         ],
         model="llama3-70b-8192",
@@ -145,19 +186,24 @@ def extract_information(context):
     return chat_completion.choices[0].message.content.strip()
 
 def clean_json_string(json_str):
-    json_str = json_str.replace("'", '"')  # Remplace les guillemets simples par des guillemets doubles
+    # Remplacer les guillemets simples par des guillemets doubles
+    json_str = json_str.replace("'", '"')
+    
+    # Remplacer les parenthèses par des accolades
+    json_str = json_str.replace("(", "{").replace(")", "}")
+    
     return json_str
 
 def extract_address(context):
     result = extract_information(context) 
     try:
         # Recherche le début et la fin du JSON
-        start_index = result.index('{')
-        end_index = result.rindex('}') + 1
+        clean_result = clean_json_string(result)
+        start_index = clean_result.index('{')
+        end_index = clean_result.rindex('}') + 1
         json_str = result[start_index:end_index]
-        cleaned_json_str = clean_json_string(json_str)
         
-        return json.loads(cleaned_json_str)
+        return json.loads(json_str)
     except (ValueError, json.JSONDecodeError) as e:
         print(f"Error extracting or decoding JSON: {e}")
         return {"addresses": [], "names": []}
@@ -189,7 +235,7 @@ def crawl_website(base_url, max_pages):
     current_category = 0
 
     while any(to_visit) and len(visited_urls) < max_pages:
-        while to_visit[current_category]:
+        while to_visit[current_category] and len(visited_urls) < max_pages:
             current_url = to_visit[current_category].pop(0)
 
             if current_url in visited_urls:

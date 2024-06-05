@@ -71,6 +71,15 @@ def replace_placeholders(prompt_text, company_info, profile_text=None):
 
     return prompt_text
 
+# Fonction pour extraire le texte entre les accolades d'une réponse.
+def extract_text_from_response(response_text):
+    start = response_text.find('{')
+    end = response_text.find('}', start)
+    if start != -1 and end != -1:
+        return response_text[start+1:end]
+    return ""
+
+
 # Fonction pour générer le corps de la lettre en utilisant LLaMA3-70b
 def generate_corp_content(company_info, prompt_corp, profile_text):
     print(f'Génération du corps de la lettre pour {company_info["company_name"]}...')
@@ -81,10 +90,12 @@ def generate_corp_content(company_info, prompt_corp, profile_text):
     ]
     response = client.chat.completions.create(
         messages=messages,
-        model="llama3-70b-8192",
+        model="llama3-70b-8192"
     )
     print("Corps de la lettre généré.")
-    return response.choices[0].message.content
+    response_text = response.choices[0].message.content
+    extracted_text = extract_text_from_response(response_text)
+    return extracted_text
 
 # Fonction pour générer le destinataire en utilisant LLaMA3-70b
 def generate_destinataire_content(company_info, prompt_destinataire):
@@ -96,10 +107,12 @@ def generate_destinataire_content(company_info, prompt_destinataire):
     ]
     response = client.chat.completions.create(
         messages=messages,
-        model="llama3-70b-8192",
+        model="llama3-70b-8192"
     )
     print("Destinataire généré.")
-    return response.choices[0].message.content
+    response_text = response.choices[0].message.content
+    extracted_text = extract_text_from_response(response_text)
+    return extracted_text
 
 # Fonction pour générer le sujet de la lettre en utilisant LLaMA3-70b
 def generate_sujet_content(company_info, prompt_sujet):
@@ -111,10 +124,12 @@ def generate_sujet_content(company_info, prompt_sujet):
     ]
     response = client.chat.completions.create(
         messages=messages,
-        model="llama3-70b-8192",
+        model="llama3-70b-8192"
     )
     print("Sujet de la lettre généré.")
-    return response.choices[0].message.content
+    response_text = response.choices[0].message.content
+    extracted_text = extract_text_from_response(response_text)
+    return extracted_text
 
 # Fonction pour sauvegarder le contenu dans un fichier
 def save_to_file(filename, content):

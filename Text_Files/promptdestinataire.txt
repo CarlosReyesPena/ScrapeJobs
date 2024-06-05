@@ -3,16 +3,15 @@
 ## Response Guidelines
 
 1. Create the recipient information using the elements provided in `results`.
-2. Provide only the recipient information; any additional indications are prohibited.
-3. Avoid introductions such as "Here are the recipient information created according to the guidelines:".
-4. The structure of the recipient information should include the following elements:
+2. The structure of the recipient information should include the following elements:
     - Company Name: {"company_name"}.
     - Full Name: If the first name and last name can be extracted from {"personal_names"}, use them. Otherwise, use the equivalent to "To whom it may concern" in {language}.
-    - Company Address: If there are any adress {"addresses"} include it.
+    - Company Address: If there are any address {"addresses"} include it.
 
-5. The response must be in {language}.
-6. Respond only with the text that will be read directly in the letter, ensuring each part of the address is on a separate line.
-7. You must choose correctly the company name and the personal name.
+3. The response must be in {language}.
+4. Ensure each part of the address is on a separate line.
+5. Enclose the entire response in curly braces `{}`.
+6. You must choose correctly the company name and the personal name.
 
 ## Example
 ### Company Information
@@ -23,9 +22,10 @@
 - Language: English
 
 ### Expected Response
+{  
 Tech Innovators  
 John Doe  
-
+}
 
 ## Example (French)
 ### Company Information
@@ -36,11 +36,12 @@ John Doe
 - Language: French
 
 ### Expected Response
+{  
 Innovateurs Tech  
-A qui de droit
+A qui de droit  
 123 Rue de l'Innovation  
-Ville Tech
-
+Ville Tech  
+}
 
 ## Compliance Check
 - Ensure the response strictly follows the above guidelines.

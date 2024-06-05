@@ -8,40 +8,61 @@
 
 ## Response Guidelines
 
-1. It is strictly forbidden to include introductory phrases such as 'Here is the body of the cover letter:' or any similar phrases. Only the main text of the cover letter can be included.
-2. Create the body of the cover letter following this structure:
-   - **Introduction**: Start with an appropriate greeting ("Madame, Monsieur" in French, "Dear Madam/Sir," in English or the equivalent in {language}). Briefly mention your current situation and express your interest in the company.
-   - **Motivation and Interest in the Company**: Explain why you are interested in this company. Mention specific aspects that attract you.
-   - **Relevant Skills and Experiences**: Describe your most relevant skills and experiences for the position.
-   - **Contribution to the Company**: Explain how you can contribute to the company with your skills and experiences.
-   - **Conclusion**: End with a sentence showing your availability for an interview and thank the recruiters. Close with an appropriate salutation ("I look forward to your response and remain, Madam, Sir, sincerely yours." or the equivalent in {language}).
-3. The response must be in {language}.
+1. Create the body of the cover letter following this structure:
+   - **Greeting**: Address the letter directly to a specific person. This gives a better impression than the general "Dear Madam/Sir".
+   - **Introduction**: The introduction should spark interest, be short and effective, and encourage reading the rest. Explain why you are applying for this position, what caught your attention, why the company interests you, and what sets you apart.
+     - Example: "Looking for a new professional challenge, I came across your company."
+     - Example: "Your company and I have several things in common: a passion for top-quality products, a philosophy of excellence, and a desire to give the best to customers. I would like to join your team and offer my services as an account manager."
+     - Example: "Are you looking for a qualified electrician with several years of experience? My profile fits your expectations exactly."
+   - **Skills and Experience**: In this part, differentiate yourself from other candidates and show that your skills and experience make you the ideal candidate. It is important to link your training and professional experience with the needs of the company and the position. Do not repeat everything you have already said in your CV but emphasize the company's needs and the position. Make a proposal to the recruiter by clearly and precisely explaining which of your skills make you the ideal candidate.
+     - Example: "Thanks to my training as a mason completed in 1998 with honors and my five years of experience with F2X Constructions SA as a foreman, I am ready to take on the role of chief foreman and offer my services."
+     - Example: "Thanks to my activity as a Digital Manager with Martin&Cie and as an e-business coordinator with the Public World agency, you will benefit from my specialized knowledge. Having also participated in project coordination for Martin&Cie and created my own website, I bring sufficient experience in the field of planning and project management."
+   - **Motivation – What Can We Accomplish Together?**: In this section, highlight your personality, motivation, and what you can and want to bring to the company. How will you use your skills and personality to contribute to the company's success?
+     - Example: "I would be happy to use the knowledge acquired during my studies, as well as my flexibility, professionalism, and creativity, in my work with your company."
+     - Example: "With my specialized knowledge, energy, and learning ability, I would like to bring productivity and sustainability to your environmental management team."
+     - Example: "Motivated, flexible, and open, I am very interested in the opportunity to use and strengthen my technical expertise."
+   - **Conclusion**: In conclusion, indicate that you are available for further information and look forward to the potential employer's response.
+     - Example: "I look forward to meeting you and convincing you of my knowledge during an interview."
+     - Example: "I am available for further information or an interview."
+     - Example: "I am convinced that I can perfectly complement your IT team and am available for an interview."
+2. The response must be in {language}.
+3. You must enclose the entire response in curly braces `{}`.
 
-
-
-## Example
 ### Company Information
-- Company Summary: A leading company specializing in developing innovative technological solutions.
+- **Company Name**: Tech Innovators
+- **Company Summary**: A leading company specializing in the development of innovative technological solutions. Known for its commitment to excellence and innovation.
 
 ### Personal Information
-John Doe, a seasoned software engineer with a passion for technology and innovation.
+- **Name**: Paul Martin
+- **Profession**: Software Engineer
+- **Experience**: Over 10 years in software engineering
+- **Previous Experience**: Senior Software Engineer at Tech Innovators
+- **Achievements**: 
+  - Increased productivity by 25%
+  - Proficient in several programming languages and modern frameworks
+  - Expertise in solving complex problems
+  - Project management and agile development
+  - Process optimization initiatives
+- **Motivations**: Passion for technology and innovation, eager to contribute to the company's technological projects.
 
-### Expected Response
-Dear Madam/Sir
+### Expected Response for French
+Here is the body letter :
 
-I am writing to express my interest in joining Tech Innovators. With over 10 years of experience in software engineering and a deep passion for technology, I am excited about the opportunity to contribute to your innovative projects.
+{  
+Madame, Monsieur,
 
-Tech Innovators' commitment to developing cutting-edge solutions resonates with my professional aspirations. I am particularly impressed by your recent project on AI-driven technologies, which aligns perfectly with my background and interests.
+À la recherche d’un nouveau défi professionnel, je suis tombé sur votre entreprise, réputée pour ses solutions technologiques innovantes et son engagement envers l'excellence. Votre vision et votre philosophie de l'innovation résonnent parfaitement avec mes propres valeurs et ambitions. C'est pourquoi je souhaiterais mettre mes compétences au service de votre équipe en tant qu'ingénieur logiciel.
 
-In my previous role at Tech Solutions, I led a team to develop a highly efficient software platform that increased productivity by 30%. My expertise in various programming languages, combined with my problem-solving skills, makes me confident in my ability to add significant value to your team.
+Avec plus de 10 ans d'expérience en ingénierie logicielle, notamment chez Tech Innovators en tant qu'ingénieur logiciel senior, j'ai dirigé des équipes de développement et contribué à l'augmentation de la productivité de 25%. Mon expertise couvre plusieurs langages de programmation et frameworks modernes, et je suis particulièrement compétent dans la résolution de problèmes complexes. Mon parcours professionnel m'a également permis de développer des compétences pointues en gestion de projets et en développement agile.
 
-I am eager to bring my skills and experiences to Tech Innovators and help drive your innovative projects to new heights. I am available for an interview at your earliest convenience and look forward to discussing how I can contribute to your team.
+J'ai mené des initiatives d'optimisation de processus qui ont considérablement amélioré l'efficacité des équipes de développement. Ces expériences m'ont préparé à relever les défis et à contribuer de manière significative aux projets de votre entreprise. Je suis convaincu que mon savoir-faire technique, allié à ma passion pour l'innovation, me permettra de contribuer efficacement à vos projets technologiques.
 
-I look forward to your response and remain, Madam, Sir, sincerely yours.
+Je me tiens à votre disposition pour un entretien afin de discuter plus en détail de ma candidature et de mes motivations. Je vous remercie par avance pour l’attention portée à ma demande.
+
+Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées
+}
+
 
 
 ## Compliance Check
-- Ensure the response strictly follows the above guidelines and dont have any introduction like "Here is the body of the cover letter :".
-
-
-
+- Ensure the response strictly follows the above guidelines.
