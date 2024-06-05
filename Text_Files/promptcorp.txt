@@ -1,22 +1,22 @@
 # Instructions for Creating the Body of a Cover Letter
 
 ## Company Information
-- Company Summary: {company_info["summary"]}
+- Company Summary: {"summary"}
 
 ## Personal Information
 {profile.txt}
 
 ## Response Guidelines
 
-1. Create the body of the cover letter following this structure:
+1. It is strictly forbidden to include introductory phrases such as 'Here is the body of the cover letter:' or any similar phrases. Only the main text of the cover letter can be included.
+2. Create the body of the cover letter following this structure:
    - **Introduction**: Start with an appropriate greeting ("Madame, Monsieur" in French, "Dear Madam/Sir," in English or the equivalent in {language}). Briefly mention your current situation and express your interest in the company.
    - **Motivation and Interest in the Company**: Explain why you are interested in this company. Mention specific aspects that attract you.
    - **Relevant Skills and Experiences**: Describe your most relevant skills and experiences for the position.
    - **Contribution to the Company**: Explain how you can contribute to the company with your skills and experiences.
    - **Conclusion**: End with a sentence showing your availability for an interview and thank the recruiters. Close with an appropriate salutation ("I look forward to your response and remain, Madam, Sir, sincerely yours." or the equivalent in {language}).
-2. The response must be in {language}.
-3. Respond only with the body text. 
-4. You MUST avoid any introductions like "Here is the body of the cover letter:" or similar phrases.
+3. The response must be in {language}.
+
 
 
 ## Example
@@ -38,5 +38,10 @@ In my previous role at Tech Solutions, I led a team to develop a highly efficien
 I am eager to bring my skills and experiences to Tech Innovators and help drive your innovative projects to new heights. I am available for an interview at your earliest convenience and look forward to discussing how I can contribute to your team.
 
 I look forward to your response and remain, Madam, Sir, sincerely yours.
+
+
+## Compliance Check
+- Ensure the response strictly follows the above guidelines and dont have any introduction like "Here is the body of the cover letter :".
+
 
 

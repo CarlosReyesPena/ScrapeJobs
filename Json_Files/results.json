@@ -1,10 +1,77 @@
 [
     {
-        "name": "ALCO Stores",
-        "summary": "ALCO Stores Sàrl est une entreprise créée en 1995, leader romand dans le conseil et la pose de pergolas, d'une large gamme de stores, de volets et de portes de garages. Avec 30 années d'expérience, nous agissons dans tous les types de constructions et nous nous engageons à proposer des matériaux de qualité, sélectionnés pour leur longévité, leur conception esthétique et leur fabrication de proximité. Nous privilégions le \"Made in Switzerland\". Nous sommes constamment à la pointe de l'innovation, avec plus de 50 nouveaux produits sortis des bureaux d'ingénieurs ces deux dernières années, notamment dans les outils connectés.",
+        "company_name": "Droople",
+        "summary": "Droople est une entreprise qui se concentre sur la numérisation des ressources mondiales en eau afin de les surveiller, les protéger et de sensibiliser les consommateurs à la réduction de la consommation d'eau. L'entreprise offre une plateforme IoT qui permet de surveiller le débit d'eau, la température, la pression, la pression de CO2, le TDS et plus encore. Les capteurs IoT de Droople peuvent être installés directement sur les équipements ou les plomberies pour fournir des informations exploitables. La plateforme de l'entreprise propose des tableaux de bord personnalisés pour visualiser, comparer et étudier les données recueillies. Avec plus de 2200 unités vendues dans 15 pays et 3 continents, Droople est un acteur majeur dans le domaine de la gestion de l'eau. L'entreprise vise à aider les consommateurs à comprendre, valoriser et gérer leurs ressources en eau de manière plus efficace.",
         "mails": [
-            "info@alcosarl.ch"
+            "contact@droople.com",
+            "support@droople.com",
+            "privacy@droople.com",
+            "sales@droople.com",
+            "emilie@radar-rp.ch",
+            "magali@radar-rp.ch",
+            "Francesco.Mercurio@droople.com"
         ],
-        "addresses": []
+        "addresses": [
+            "Route du Verney 18, 1070 Puidoux, Suisse",
+            "Cannes, France"
+        ],
+        "personal_names": [
+            "Emilie Pralong",
+            "Magali Dubois",
+            "Emilie Pralong",
+            "Magali Dubois",
+            "Francesco Mercurio"
+        ]
+    },
+    {
+        "company_name": "KrakenFlex",
+        "summary": "KrakenFlex is a company that specializes in providing innovative solutions for Distribution System Operators (DSOs) to gain greater insight, understanding, and control of their grids. The company's platform utilizes intelligent fault detection, power quality management, and network DER flexibility orchestration to enable real-time decision making and improve the overall efficiency of the grid. \n\nKrakenFlex's solution involves the installation of its gateway at the grid edge on the LV side of the network, enabling precise voltage estimation and current measurement throughout the MV and LV grids. This provides DSOs with real-time insights into the grid, allowing them to identify potential issues before they occur and make informed decisions. \n\nThe company's power quality management system monitors the grid status in real-time, automatically sounding violation alarms for power quality events and generating EN50160 compliant reports to prove adequate power supply quality. \n\nFurthermore, KrakenFlex's network DER flexibility orchestration solution provides grid-level control over Distributed Energy Resources (DERs) based on real-time data, enabling DSOs to manage voltages in response to new DER installations more effectively. \n\nKrakenFlex is a registered company in England and Wales, with its registered office located in London. The company appears to be focused on the European market, particularly the UK. The company's mission is to provide innovative solutions that enable DSOs to gain greater insight, understanding, and control of their grids, ultimately leading to a more efficient and reliable energy system.",
+        "mails": [
+            "dominic.bellamy@octoenergy.com",
+            "mel.mercer-royce@krakenflex.com"
+        ],
+        "addresses": [],
+        "personal_names": [
+            "Dominic Bellamy",
+            "Mel Mercer-Royce"
+        ]
+    },
+    {
+        "company_name": "eSMART",
+        "summary": "eSMART est une entreprise qui propose des solutions intelligentes et connectées pour les immeubles. La philosophie d'eSMART est de permettre de mieux vivre dans son habitat sans trop emprunter à la planète. Pour cela, l'entreprise répond aux besoins avancés de construction ou de rénovation écologiques et rend les bâtiments évolutifs, prêts pour les services futurs.\n\nGrâce à la technologie exclusive PLC-eSMART, issue de l'EPFL (Ecole Polytechnique de Lausanne), eSMART permet d'alléger l'architecture technique et la mise en œuvre. Les gestionnaires d'immeubles, connectés à chaque objet, bénéficient des services connectés pour télé-relever les compteurs, surveiller les installations ou communiquer vers les occupants.\n\nLe système eSMART se présente sous la forme d'un écran tactile mural qui permet de gérer la maison d'un simple clic, soit depuis la maison, soit à distance. Cet écran remplace le visiophone et permet d'ouvrir à ses invités, après avoir vérifié leurs identités sur l'écran, en toute sécurité. Il permet également de régler la température pièce par pièce, d'optimiser la consommation d'énergie et de gérer les consommations de chauffage, d'eau chaude et d'électricité en temps réel.\n\nLes occupants peuvent également utiliser l'écran pour gérer leur agenda familial, laisser des messages à leurs enfants ou accéder à des informations locales comme la météo ou les horaires des transports publics.\n\neSMART propose ainsi une solution de gestion de maison intégrée et connectée qui répond aux besoins de confort, de sécurité et d'efficience énergétique.",
+        "mails": [
+            "info@myesmart.com",
+            "deutschland@myesmart.com",
+            "nederland@myesmart.com",
+            "belgique@myesmart.com",
+            "jobs@myesmart.com"
+        ],
+        "addresses": [
+            "Avenue des Baumettes 23, CH-1020 Renens, Switzerland",
+            "Avenue des Baumettes 23, CH-1020 Renens, Switzerland",
+            "Rue des Baumettes 23, CH-1020 Renens, Switzerland",
+            "Allemagne",
+            "Pays-Bas",
+            "Belgique"
+        ],
+        "personal_names": [
+            "Adrineh Binggeli"
+        ]
+    },
+    {
+        "company_name": "ETAVIS",
+        "summary": "ETAVIS est le leader suisse et liechtensteinois des solutions visionnaires et haut de gamme en électronique, communication et automatisation. Fort de son expertise, l'entreprise apporte son soutien en tant que partenaire pour trouver les meilleures solutions aux besoins de ses clients et les accompagner dans tous leurs projets. ETAVIS propose des solutions électriques efficaces et durables, des conseils complets et personnalisés, des systèmes de surveillance, du Smart Home, de l'électromobilité et des énergies renouvelables. L'entreprise est présente dans toute la Suisse et au Liechtenstein avec 57 entités, ce qui lui permet d'avoir une connaissance intime des besoins et des enjeux locaux et d'offrir un service sur place 24 heures sur 24. ETAVIS est également un employeur innovant qui offre des formations professionnelles et des opportunités d'apprentissage. L'entreprise se concentre sur la mise en œuvre de solutions énergétiques durables et novatrices pour répondre aux besoins de ses clients.",
+        "mails": [],
+        "addresses": [],
+        "personal_names": []
+    },
+    {
+        "company_name": "Gigatec",
+        "summary": "Fondée en 1977, Gigatec s'est toujours adaptée au marché de l'électronique et aux besoins de ses clients grâce à sa veille technologique régulière, mais aussi grâce à ses compétences pointues et sa flexibilité. L'entreprise propose des prestations à la hauteur des exigences les plus élevées dans le domaine électronique, allant du développement électronique au développement mécanique. Grâce à ses trois départements (développement électronique, développement mécanique et production & industrialisation), Gigatec est capable de proposer des prestations à la carte, permettant ainsi à ses clients d'avoir un concept et laissant Gigatec s'occuper du reste. Les départements travaillent en synergie pour industrialiser efficacement n'importe quel produit à des coûts faibles et dans des délais courts. L'entreprise met l'accent sur la satisfaction à 100% de ses clients, qui sont considérés comme des partenaires. Gigatec est également à la pointe de la technologie, proposant des outils de développement et de production électroniques de pointe, allant des composants THT aux composants SMD. L'entreprise est également engagée dans la recherche et le développement, proposant des solutions électroniques innovantes.",
+        "mails": [
+            "info@gigatec.ch"
+        ],
+        "addresses": [],
+        "personal_names": []
     }
 ]

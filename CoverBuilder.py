@@ -51,12 +51,15 @@ def replace_placeholders(prompt_text, company_info, profile_text=None):
     # Créer une chaîne de tous les e-mails et adresses
     all_emails = ", ".join(company_info.get("mails", []))
     all_addresses = "; ".join(company_info.get("addresses", []))
+    all_personal_names = ", ".join(company_info.get("personal_names", []))
+
 
     # Remplacement des placeholders
-    prompt_text = prompt_text.replace('{company_info["name"]}', company_info.get("name", ""))
-    prompt_text = prompt_text.replace('{company_info["mails"]}', all_emails)
-    prompt_text = prompt_text.replace('{company_info["summary"]}', company_info.get("summary", ""))
-    prompt_text = prompt_text.replace('{company_info["addresses"]}', all_addresses)
+    prompt_text = prompt_text.replace('{"company_name"}', company_info.get("company_name", ""))
+    prompt_text = prompt_text.replace('{"mails"}', all_emails)
+    prompt_text = prompt_text.replace('{"summary"}', company_info.get("summary", ""))
+    prompt_text = prompt_text.replace('{"addresses"}', all_addresses)
+    prompt_text = prompt_text.replace('{"personal_names"}', all_personal_names)
 
     if profile_text:
         prompt_text = prompt_text.replace("{profile.txt}", profile_text)
@@ -70,7 +73,7 @@ def replace_placeholders(prompt_text, company_info, profile_text=None):
 
 # Fonction pour générer le corps de la lettre en utilisant LLaMA3-70b
 def generate_corp_content(company_info, prompt_corp, profile_text):
-    print(f'Génération du corps de la lettre pour {company_info["name"]}...')
+    print(f'Génération du corps de la lettre pour {company_info["company_name"]}...')
     base_prompt = replace_placeholders(prompt_corp, company_info, profile_text)
     messages = [
         {"role": "system", "content": "You are an expert in professional cover letter writing with over 20 years of experience. You have helped thousands of candidates craft compelling and effective cover letters."},
@@ -85,7 +88,7 @@ def generate_corp_content(company_info, prompt_corp, profile_text):
 
 # Fonction pour générer le destinataire en utilisant LLaMA3-70b
 def generate_destinataire_content(company_info, prompt_destinataire):
-    print(f'Génération du destinataire pour {company_info["name"]}...')
+    print(f'Génération du destinataire pour {company_info["company_name"]}...')
     base_prompt = replace_placeholders(prompt_destinataire, company_info)
     messages = [
         {"role": "system", "content": "You are an expert in professional cover letter writing with over 20 years of experience. You have helped thousands of candidates craft compelling and effective cover letters."},
@@ -100,7 +103,7 @@ def generate_destinataire_content(company_info, prompt_destinataire):
 
 # Fonction pour générer le sujet de la lettre en utilisant LLaMA3-70b
 def generate_sujet_content(company_info, prompt_sujet):
-    print(f'Génération du sujet de la lettre pour {company_info["name"]}...')
+    print(f'Génération du sujet de la lettre pour {company_info["company_name"]}...')
     base_prompt = replace_placeholders(prompt_sujet, company_info)
     messages = [
         {"role": "system", "content": "You are an expert in professional cover letter writing with over 20 years of experience. You have helped thousands of candidates craft compelling and effective cover letters."},
@@ -218,7 +221,7 @@ def build_covers(json_file='Json_Files/results.json'):
     prompt_corp, prompt_destinataire, prompt_sujet, profile_text = load_prompts()
 
     for company_info in data:
-        name = company_info["name"]
+        name = company_info["company_name"]
         print(f"Traitement de {name}...")
 
         # Générer le contenu de la lettre

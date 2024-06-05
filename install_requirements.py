@@ -9,7 +9,8 @@ def main():
         "requests",
         "beautifulsoup4",
         "groq",
-        "langdetect"
+        "langdetect",
+        "watchdog"
     ]
 
     for package in packages:

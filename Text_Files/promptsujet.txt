@@ -1,15 +1,16 @@
 # Instructions for Creating the Subject of a Cover Letter
 
 ## Company Information
-- Company Name: {company_info["name"]}
-- Company Summary: {company_info["summary"]}
+- Company Name: {"name"}
+- Company Summary: {"summary"}
 
 ## Response Guidelines
 
 1. Create the subject of the cover letter using the information provided above.
 2. Respond directly with the subject text without any introduction.
-3. Ensure that the subject is short, clear, and impactful.
+3. Ensure that the subject is short, clear, and impactful. It must be no more than 10 words.
 4. The response must be in {language}.
+5. Do not leave the subject incomplete with placeholders such as [position] or [your role].
 
 ## Example
 ### Company Information
@@ -24,5 +25,4 @@ Application for the Software Developer position at Tech Innovators
 - Ensure the response does not contain any elements that could cause LaTeX compilation errors.
 
 ## Compliance Check
-- Ensure the response strictly follows the above guidelines.
-- If deviations are found, write @DeviationFound.
+- Ensure the response strictly follows the above guidelines. Less than 10 words. Without placeholders.
