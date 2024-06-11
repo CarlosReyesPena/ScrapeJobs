@@ -48,7 +48,7 @@ class ResultsFileModifiedHandler(FileSystemEventHandler):
 
 def run_company_craw():
     # Exécuter CompanyCraw pour générer les résultats à partir des URLs
-    CompanyCraw.main('Json_Files/base_urls.json', 5)
+    CompanyCraw.main('Json_Files/company_info.json', 20)
 
 def run_cover_builder(new_data):
     # Créer un fichier JSON temporaire

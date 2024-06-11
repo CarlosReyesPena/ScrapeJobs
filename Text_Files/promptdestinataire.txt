@@ -2,36 +2,25 @@
 
 ## Response Guidelines
 
-1. Create the recipient information using the elements provided in `results`.
-2. The structure of the recipient information should include the following elements:
-    - Company Name: {"company_name"}.
-    - Full Name: If the first name and last name can be extracted from {"personal_names"}, use them. Otherwise, use the equivalent to "To whom it may concern" in {language}.
-    - Company Address: If there are any address {"addresses"} include it.
+1. The structure of the recipient information should include the following elements:
+    - **Company Name:** Use the value from {"company_name"}.
+    - **Full Name:** Choose the most appropriate name for handling applications based on the following priority:
+        1. If "HR" or "Human Resources" is in the title from {"personal_names"}, use that name.
+        2. If the above is not available, use any name with "Head" or "Chief" in the title.
+        3. If no appropriate name is found, use the equivalent to "To whom it may concern" in {language}.
+    - **Company Address:** If there are any addresses in {"addresses"}, include them. Ensure each part of the address is on a separate line.
 
-3. The response must be in {language}.
-4. Ensure each part of the address is on a separate line.
+2. Remove any role or title before using the name.
+3. Create the recipient information using the elements provided.
+4. The response must be in {language}.
 5. Enclose the entire response in curly braces `{}`.
-6. You must choose correctly the company name and the personal name.
+6. Ensure to select the correct company name and personal name from the provided data.
 
-## Example
-### Company Information
-- Company Name: Tech Innovators
-- Email Addresses: hr@techinnovators.com, info@techinnovators.com
-- Company Addresses:
-- Personal Names: John Doe, Jane Smith
-- Language: English
-
-### Expected Response
-{  
-Tech Innovators  
-John Doe  
-}
-
-## Example (French)
+## Example in French
 ### Company Information
 - Company Name: Innovateurs Tech
 - Email Addresses: recrutement@innovateurstech.com, info@innovateurstech.com
-- Company Addresses: 123 Rue de l'Innovation, Ville Tech; 789 Parc Technologique, Innovation Ville
+- Company Addresses: 123 Rue de l'Innovation, 1007 Croissant
 - Personal Names:
 - Language: French
 
@@ -40,9 +29,5 @@ John Doe
 Innovateurs Tech  
 A qui de droit  
 123 Rue de l'Innovation  
-Ville Tech  
+1007 Croissant 
 }
-
-## Compliance Check
-- Ensure the response strictly follows the above guidelines.
-- If deviations are found, write @DeviationFound.

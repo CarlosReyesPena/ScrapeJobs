@@ -100,19 +100,41 @@ def generate_corp_content(company_info, prompt_corp, profile_text):
 # Fonction pour générer le destinataire en utilisant LLaMA3-70b
 def generate_destinataire_content(company_info, prompt_destinataire):
     print(f'Génération du destinataire pour {company_info["company_name"]}...')
+
+    def is_valid_format(text):
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        if not (2 <= len(lines) <= 4):
+            return False
+        for line in lines:
+            if len(line) > 32:
+                return False
+        return True
+
     base_prompt = replace_placeholders(prompt_destinataire, company_info)
     messages = [
         {"role": "system", "content": "You are an expert in professional cover letter writing with over 20 years of experience. You have helped thousands of candidates craft compelling and effective cover letters."},
         {"role": "user", "content": base_prompt}
     ]
-    response = client.chat.completions.create(
-        messages=messages,
-        model="llama3-70b-8192"
-    )
-    print("Destinataire généré.")
-    response_text = response.choices[0].message.content
-    extracted_text = extract_text_from_response(response_text)
-    return extracted_text
+
+    max_attempts = 4
+
+    for _ in range(max_attempts):
+        response = client.chat.completions.create(
+            messages=messages,
+            model="llama3-70b-8192"
+        )
+        response_text = response.choices[0].message.content
+        extracted_text = extract_text_from_response(response_text)
+
+        if ',' not in extracted_text and is_valid_format(extracted_text):
+            print("Destinataire généré.")
+            return extracted_text
+        else:
+            print("Format incorrect, régénération en cours...")
+        
+
+    print("Échec de la génération du destinataire après 4 tentatives.")
+    return "Échec de la génération du destinataire après 4 tentatives."
 
 # Fonction pour générer le sujet de la lettre en utilisant LLaMA3-70b
 def generate_sujet_content(company_info, prompt_sujet):

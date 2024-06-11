@@ -16,10 +16,6 @@ def load_api_key(file_path='groq_api_key.txt'):
 api_key = load_api_key()
 client = Groq(api_key=api_key)
 
-# Charger les URLs à partir du fichier JSON
-def load_base_urls(json_file='Json_Files/base_urls.json'):
-    with open(json_file, 'r', encoding='utf-8') as file:
-        return json.load(file)
     
 # Fonction pour charger les mots-clés à partir d'un fichier JSON
 def load_keywords(json_file_path='Json_Files/keywords.json'):
@@ -30,6 +26,17 @@ def load_keywords(json_file_path='Json_Files/keywords.json'):
     keywords_cat2 = data['cat_2']
     
     return keywords_cat1, keywords_cat2
+
+def load_company_info(json_file='Json_Files/company_info.json'):
+    try:
+        with open(json_file, 'r', encoding='utf-8') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return []
+
+def save_company_info(company_info, json_file='Json_Files/results.json'):
+    with open(json_file, 'w', encoding='utf-8') as file:
+        json.dump(company_info, file, ensure_ascii=False, indent=4)
 
 
 # Fonction pour logger les résultats
@@ -169,22 +176,6 @@ def get_internal_links(base_url, html_content, keywords_cat1, keywords_cat2):
 def has_extension(url):
     return not re.search(r'\.\w+$', url)
 
-def extract_information(context):
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": "You are an expert in extracting specific information from text and providing structured outputs in JSON format."
-            },
-            {
-                "role": "user",
-                "content": f"From the following text: {context}, extract the physical addresses and person names. Do not include any post office boxes. Provide the results in the following JSON format: {{\"addresses\": [], \"names\": []}}. Don't include adresses that are not related to the company. Exclude any person that is not a key figure in the company."
-            }
-        ],
-        model="llama3-70b-8192",
-    )
-    return chat_completion.choices[0].message.content.strip()
-
 def clean_json_string(json_str):
     # Remplacer les guillemets simples par des guillemets doubles
     json_str = json_str.replace("'", '"')
@@ -194,19 +185,44 @@ def clean_json_string(json_str):
     
     return json_str
 
+def extract_text_within_braces(text):
+    try:
+        # Recherche le début et la fin des accolades
+        start_index = text.index('{')
+        end_index = text.rindex('}') + 1
+        return text[start_index:end_index]
+    except (ValueError, IndexError) as e:
+        print(f"Error extracting text within braces: {e}")
+        return ""
+
 def extract_address(context):
-    result = extract_information(context) 
+    result = extract_information(context)
     try:
         # Recherche le début et la fin du JSON
         clean_result = clean_json_string(result)
-        start_index = clean_result.index('{')
-        end_index = clean_result.rindex('}') + 1
-        json_str = result[start_index:end_index]
+        
+        json_str = extract_text_within_braces(clean_result)
         
         return json.loads(json_str)
     except (ValueError, json.JSONDecodeError) as e:
         print(f"Error extracting or decoding JSON: {e}")
-        return {"addresses": [], "names": []}
+        
+        # Handling incorrect format by informing the user and retrying extraction
+        try:
+            corrected_result = extract_information(
+                context + " The previous output was not in the correct JSON format. Please ensure the JSON is properly formatted."
+            )
+            clean_result = clean_json_string(corrected_result)
+            json_str = extract_text_within_braces(clean_result)
+            return json.loads(json_str)
+        except (ValueError, json.JSONDecodeError) as e:
+            print(f"Error extracting or decoding JSON after retry: {e}")
+            return {"addresses": [], "names_and_roles": []}
+    
+def chunk_text(text, chunk_size):
+    words = text.split()
+    for i in range(0, len(words), chunk_size):
+        yield ' '.join(words[i:i + chunk_size])
 
 # Fonction principale pour parcourir le site et extraire les e-mails et adresses
 def crawl_website(base_url, max_pages):
@@ -256,8 +272,8 @@ def crawl_website(base_url, max_pages):
                             for address in information["addresses"]:
                                 print(f"Address found: {address}")
                                 addresses.append(address)
-                        if information["names"]:
-                            for name in information["names"]:
+                        if information["names_and_roles"]:
+                            for name in information["names_and_roles"]:
                                 print(f"Name found: {name}")
                                 names.append(name)
                         processed_emails[email] = information
@@ -291,23 +307,67 @@ def detect_language(text):
         return detect(text)
     except LangDetectException:
         return "en"
-
-# Fonction pour générer un résumé en utilisant le modèle "llama3-70b-8192"
-def generate_summary(content, language):
+    
+def extract_information(context):
     chat_completion = client.chat.completions.create(
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert in summarizing company information."
+                "content": (
+                    "You are an expert in extracting specific information from text and providing structured outputs in JSON format. "
+                    "Your task is to identify and extract physical addresses and the names of key figures along with their roles from the provided text. "
+                    "Ensure the output is accurate and formatted correctly, avoiding redundancy."
+                )
             },
             {
                 "role": "user",
-                "content": f"You must provide only the description of the company, without any preliminary indication, using the following content: {content}. Ensure the description is detailed, covering aspects such as the company's history, mission, key products or services, target market, and unique selling points. Do not invent any information. The response must be in {language}."
+                "content": (
+                    f"From the following text: {context}, extract the physical addresses and person names with their roles. "
+                    f"Do not include any post office boxes. Provide the results in the following JSON format: "
+                    f"{{\"addresses\": [\"address1\", \"address2\", ...], \"names_and_roles\": [\"Person Name, Person Role\", ...]}}. "
+                    f"Do not include addresses that are not related to the company. Exclude any person that is not a key figure in the company. "
+                    f"Ensure each name is correctly paired with their role and formatted as \"Person Name, Person Role\" without any extra structure or redundancy."
+                )
             }
         ],
         model="llama3-70b-8192",
     )
-    return chat_completion.choices[0].message.content
+    return chat_completion.choices[0].message.content.strip()
+    
+def generate_summary(content, language, current_summary=""):
+    combined_content = current_summary + " " + content if current_summary else content
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are an expert in summarizing company information. "
+                    "Your task is to create a comprehensive and coherent company description suitable for a cover letter. "
+                    "The description should be detailed and include, if available, the following elements: "
+                    "company history, mission, key products or services, target market, unique selling points, recent achievements, and company culture. "
+                    "If certain details are missing, focus on summarizing the provided information effectively. "
+                )
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"### Provided Information:\n"
+                    f"{combined_content}\n\n"
+                    f"### Task:\n"
+                    f"Using the provided information, generate a detailed and coherent company description. "
+                    f"Include the company's history, mission, key products or services, target market, unique selling points, recent achievements, and company culture if available. "
+                    f"If specific details are not available, summarize the given information as effectively as possible. "
+                    f"Output the description in the format: (description)."
+                    f"The final output should be in {language} and enclosed in parentheses ()."
+                )
+            }
+        ],
+        model="llama3-70b-8192",
+    )
+    response = chat_completion.choices[0].message.content
+    extracted_text = extract_text_within_braces(clean_json_string(response))
+    return extracted_text if extracted_text else response
+
 
 # Fonction pour extraire le nom de l'entreprise à partir du résumé en utilisant le modèle "llama3-70b-8192"
 def extract_company_name(summary):
@@ -327,43 +387,91 @@ def extract_company_name(summary):
     return chat_completion.choices[0].message.content.strip()
 
 
+def update_company_info(result, company_info_file='Json_Files/company_info.json', result_file='Json_Files/results.json'):
+    company_info = load_company_info(company_info_file)
+    updated = False
+
+    for company in company_info:
+        if company["website"] == result["website"]:
+            # Mise à jour des informations existantes uniquement si elles sont absentes
+            if not company.get("summary"):
+                company["summary"] = result.get("summary", "")
+            if not company.get("mails"):
+                company["mails"] = result.get("mails", [])
+            if not company.get("addresses"):
+                company["addresses"] = result.get("addresses", [])
+            if not company.get("personal_names"):
+                company["personal_names"] = result.get("personal_names", [])
+            updated = True
+            break
+
+    if not updated:
+        # Ajout de nouvelles informations si l'URL n'est pas trouvée
+        company_info.append({
+            "company_name": result.get("company_name", ""),
+            "phone": "",
+            "website": result.get("website", ""),
+            "addresses": result.get("addresses", []),
+            "summary": result.get("summary", ""),
+            "mails": result.get("mails", []),
+            "personal_names": result.get("personal_names", [])
+        })
+
+    # Filtrer les entreprises sans mails
+    company_info = [company for company in company_info if company.get("mails")]
+
+    save_company_info(company_info, result_file)
+    print("Company info updated successfully.")
+
+
 # Fonction pour exécuter le processus complet de crawl et de génération de résultats
-def main(json_file='Json_Files/base_urls.json', max_pages=10):
-    base_urls = load_base_urls(json_file)
+def main(company_info_file='Json_Files/company_info.json', results_file='Json_Files/results.json', max_pages=20):
+    # Charger les informations des entreprises depuis company_info.json
+    company_info = load_company_info(company_info_file)
+
     results = []
 
-    for base_url in base_urls:
+    for company in company_info:
+        base_url = company["website"]
+        print(f"Crawling website: {base_url}")
         emails, addresses, names, all_texts = crawl_website(base_url, max_pages)
 
-        max_length = 5000
+        max_length = 15000
         merged_text = " ".join(all_texts)[:max_length]
 
-        print(f"Texte envoyé à l'IA :", merged_text[:1000])
-
         language = detect_language(merged_text)
-        summary = generate_summary(merged_text, language)
-        company_name = extract_company_name(summary)
+        current_summary = ""
+
+        # Diviser le texte en morceaux et itérer pour améliorer la description
+        chunk_size = 2000  # Définir la taille des chunks en nombre de caractères
+        for chunk in chunk_text(merged_text, chunk_size):
+            print(f"Texte envoyé à l'IA (partie) :", chunk[:2000])
+            current_summary = generate_summary(chunk, language, current_summary)
+            print(f"Résumé intermédiaire de l'entreprise :", current_summary)
+
+        company_name = extract_company_name(current_summary)
 
         print(f"Adresses e-mail trouvées :", emails)
         print(f"Adresses trouvées :", addresses)
         print(f"Noms trouvés :", names)
         print(f"Nom de l'entreprise :", company_name)
-        print(f"Résumé de l'entreprise :", summary)
+        print(f"Résumé de l'entreprise :", current_summary)
 
         result = {
             "company_name": company_name,
-            "summary": summary,
+            "summary": current_summary,
             "mails": list(emails),
             "addresses": list(addresses),
-            "personal_names": list(names)
+            "personal_names": list(names),
+            "website": base_url  # Ajouter l'URL de base au résultat
         }
 
         results.append(result)
-
-        # Écriture des résultats mis à jour dans un fichier JSON
-        with open('Json_Files/results.json', mode='w', encoding='utf-8') as file:
-            json.dump(results, file, ensure_ascii=False, indent=4)
-    
+        # Mettre à jour les informations des entreprises dans company_info.json
+        update_company_info(result, company_info_file, results_file)
+    # Filtrer les entreprises sans mails
+    print("Mise à jour de company_info.json terminée.")
 
 if __name__ == "__main__":
     main()
+
