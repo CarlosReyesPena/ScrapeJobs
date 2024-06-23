@@ -1,6 +1,7 @@
 import os
 import re
 import requests
+from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 import json
@@ -43,58 +44,167 @@ def save_company_info(company_info, json_file='Json_Files/results.json'):
     with open(json_file, 'w', encoding='utf-8') as file:
         json.dump(company_info, file, ensure_ascii=False, indent=4)
 
+from playwright.sync_api import sync_playwright
+import re
+from bs4 import BeautifulSoup
+import base64
+import os
+
+# Fonction pour capturer les mailto links avec Playwright avec une limite d'essais
+def capture_mailto_links(url):
+    mailto_requests_urls = []
+    click_attempts = 0  # Initialiser le compteur d'essais de clics
+    max_clicks = 10  # Limite des clics
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)  # Lancer le navigateur en mode "headless"
+        page = browser.new_page()
+
+        # Fonction pour capturer les requêtes réseau
+        def capture_request(request):
+            if 'mailto:' in request.url:
+                mailto_requests_urls.append(request.url)
+
+        # Écouter les événements de requêtes réseau
+        page.on('request', capture_request)
+
+        try:
+            # Naviguer vers l'URL
+            page.goto(url)
+            page.wait_for_load_state('networkidle')
+        except Exception as e:
+            print(f"Erreur lors de la navigation vers {url}: {e}")
+            browser.close()
+            return mailto_requests_urls
+
+        # Obtenir le contenu HTML de la page
+        html_content = page.content()
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        # Identifier et cliquer sur les éléments contenant "mail" n'importe où dans les attributs ou le texte
+        mail_elements = soup.find_all('a')
+        for element in mail_elements:
+            if click_attempts >= max_clicks:
+                print("Nombre maximum d'essais de clics atteint.")
+                break
+            try:
+                element_str = str(element)
+                if "mail" in element_str.lower():
+                    # Rechercher l'élément avec Playwright et cliquer dessus
+                    playwright_element = page.query_selector(f'a[href="{element["href"]}"]')
+                    if playwright_element:
+                        playwright_element.click()
+                        page.wait_for_load_state('networkidle')
+                        click_attempts += 1  # Incrémenter le compteur d'essais de clics
+            except Exception as e:
+                print(f"Error clicking element: {e}")
+                click_attempts += 1  # Incrémenter le compteur d'essais de clics en cas d'erreur
+
+        # Fermer le navigateur
+        browser.close()
+
+    return mailto_requests_urls
+
+# Fonction pour extraire les e-mails des URLs "mailto:"
+def extract_emails_from_mailto_links(mailto_links):
+    emails = []
+    for link in mailto_links:
+        match = re.search(r'mailto:([^?]+)', link)
+        if match:
+            emails.append(match.group(1))
+    return emails
+
 # Fonction pour logger les résultats
 def log_extraction(function_name, input_text, result):
-    # Crée le dossier de logs s'il n'existe pas
     log_dir = f'logs/{function_name}'
     os.makedirs(log_dir, exist_ok=True)
-    
-    # Compte le nombre de fichiers existants pour déterminer le prochain numéro de fichier
     existing_logs = len(os.listdir(log_dir))
     log_file_path = os.path.join(log_dir, f'log_{existing_logs + 1}.txt')
-    
+
     with open(log_file_path, 'w', encoding='utf-8') as file:
         file.write("Input Text:\n")
         file.write(input_text + "\n\n")
         file.write("Result:\n")
         file.write(str(result) + "\n")
 
-# Fonction pour extraire les e-mails d'une page HTML
-def extract_emails_with_context(html_content):
+# Fonction pour extraire les e-mails d'une page HTML et utiliser Playwright si nécessaire
+def extract_emails_with_context(html_content, base_url, visited_mailto_links):
     soup = BeautifulSoup(html_content, 'html.parser')
     visible_text = soup.get_text(separator='\n', strip=True)  # Conserver les lignes
     
     email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-    emails = []
-    
+    emails = set()  # Utilisation d'un set pour éviter les doublons
+
+    # Identifier les éléments contenant "mail"
+    mail_elements = soup.find_all('a', href=True)
+    for element in mail_elements:
+        if "mail" in element.get_text(separator=' ', strip=True).lower():
+            href = element['href']
+            if href not in visited_mailto_links:
+                # Récupérer le contexte autour de l'élément
+                element_context = element.get_text(separator=' ', strip=True)
+                start = max(visible_text.find(element_context) - 500, 0)
+                end = min(visible_text.find(element_context) + len(element_context) + 500, len(visible_text))
+                context = visible_text[start:end]
+
+                # Utiliser Playwright pour capturer les mails obfusqués
+                mailto_requests_urls = capture_mailto_links(base_url)
+                print(mailto_requests_urls)
+                mailto_emails = extract_emails_from_mailto_links(mailto_requests_urls)
+                for email in mailto_emails:
+                    emails.add((email, context))
+                    log_extraction('mailto_link', base_url, (email, context))
+                
+                visited_mailto_links.add(href)
+
+    # Extraire les e-mails visibles directement
     for match in re.finditer(email_pattern, visible_text):
         email = match.group()
         start = max(match.start() - 500, 0)
         end = min(match.end() + 500, len(visible_text))
         context = visible_text[start:end]
-        emails.append((email, context))
-        
-        # Log the extraction
+        emails.add((email, context))
         log_extraction('html_content', html_content, (email, context))
         log_extraction('extract_emails_with_context', visible_text, (email, context))
-    
-    return emails
 
-# Fonction pour logger les résultats
-def log_extraction(function_name, input_text, result):
-    # Crée le dossier de logs s'il n'existe pas
-    log_dir = f'logs/{function_name}'
-    os.makedirs(log_dir, exist_ok=True)
+    # Techniques d'obfuscation
+    # 1. Remplacement de caractères
+    obfuscated_emails = re.findall(r'\b\w+[.\w+]*\s*\[at\]\s*\w+[.\w+]*\s*\[dot\]\s*\w+\b', visible_text)
+    for obf_email in obfuscated_emails:
+        email = obf_email.replace('[at]', '@').replace('[dot]', '.').replace(' ', '')
+        emails.add((email, visible_text))
+        log_extraction('obfuscated_email', visible_text, email)
+
+    # 2. Encodage HTML
+    encoded_emails = re.findall(r'&#\d+;', visible_text)
+    if encoded_emails:
+        email = ''.join([chr(int(code[2:-1])) for code in encoded_emails])
+        emails.add((email, visible_text))
+        log_extraction('encoded_email', visible_text, email)
+
+    # 3. Base64 Encodé
+    base64_emails = re.findall(r'[A-Za-z0-9+/=]{40,}', visible_text)
+    for b64_email in base64_emails:
+        try:
+            email = base64.b64decode(b64_email).decode('utf-8')
+            if re.match(email_pattern, email):
+                emails.add((email, visible_text))
+                log_extraction('base64_email', visible_text, email)
+        except Exception as e:
+            print(f"Erreur lors du décodage Base64: {e}")
+
+    # 4. Suppression des espaces
+    spaced_emails = re.findall(r'\b\w+\s*\w*\s*\[?\s*@\s*\]?\s*\w+\s*\.\s*\w+\b', visible_text)
+    for spaced_email in spaced_emails:
+        email = spaced_email.replace(' ', '').replace('[at]', '@').replace('[dot]', '.')
+        if re.match(email_pattern, email):
+            emails.add((email, visible_text))
+            log_extraction('spaced_email', visible_text, email)
     
-    # Compte le nombre de fichiers existants pour déterminer le prochain numéro de fichier
-    existing_logs = len(os.listdir(log_dir))
-    log_file_path = os.path.join(log_dir, f'log_{existing_logs + 1}.txt')
-    
-    with open(log_file_path, 'w', encoding='utf-8') as file:
-        file.write("Input Text:\n")
-        file.write(input_text + "\n\n")
-        file.write("Result:\n")
-        file.write(str(result) + "\n")
+    print(list(emails))
+
+    return list(emails)  # Convertir le set en liste
+
 
 # Fonction pour récupérer le contenu d'une page web
 def fetch_page(url):
@@ -227,6 +337,7 @@ def crawl_website(base_url, max_pages):
     processed_emails = {}
     summary_texts = []
     visited_links_order = []
+    visited_mailto_ref = set()
 
     # Chargement des listes List_1 et List_2
     list_1, list_2 = load_lists("Json_Files/lists.json")
@@ -262,7 +373,7 @@ def crawl_website(base_url, max_pages):
                 
                 # Extraction des e-mails seulement sur la première page et les pages de list_1
                 if current_category == 0 or current_url in cat1_links:
-                    emails_with_context = extract_emails_with_context(html_content)
+                    emails_with_context = extract_emails_with_context(html_content,current_url,visited_mailto_ref)
                     for email, context in emails_with_context:
                         print(f"Email found: {email}")
                         if email not in processed_emails:
@@ -293,15 +404,27 @@ def crawl_website(base_url, max_pages):
 
 def process_information(context, addresses, names):
     information = extract_address(context)
+
+    # Utilisation de sets pour éviter les doublons
+    unique_addresses = set(addresses)
+    unique_names = set(names)
+
     if information["addresses"]:
         for address in information["addresses"]:
             print(f"Address found: {address}")
-            addresses.append(address)
+            unique_addresses.add(address)  # Ajout des adresses uniques
+
     if information["names_and_roles"]:
         for name in information["names_and_roles"]:
             print(f"Name found: {name}")
-            names.append(name)
+            unique_names.add(name)  # Ajout des noms uniques
+
+    # Convertir les sets en listes
+    addresses[:] = list(unique_addresses)
+    names[:] = list(unique_names)
+
     return information
+
 
 # Fonction pour détecter la langue du contenu
 def detect_language(text):
