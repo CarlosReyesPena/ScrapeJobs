@@ -1,11 +1,5 @@
 [
     {
-        "company_name": "krakenflex",
-        "phone": "+41 21 546 23 04",
-        "website": "https://www.krakenflex.com/network-intelligence",
-        "addresses": "Route du Verney 20B, 1070 Puidoux"
-    },
-    {
         "company_name": "eSMART Technologies SA",
         "phone": "021 552 25 10",
         "website": "http://www.myesmart.com",
@@ -46,8 +40,7 @@
         "phone": "+41 22 899 18 18",
         "website": "http://www.st-sa.ch",
         "addresses": "67 rte du Pas-de-l´Echelle, Veyrier"
-    },
-    {
+    },,{
         "company_name": "Sedelec SA Lausanne",
         "phone": "021 651 20 00",
         "website": "https://www.sedelec-lsne.ch/",

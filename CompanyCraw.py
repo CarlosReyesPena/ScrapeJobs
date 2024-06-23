@@ -7,6 +7,7 @@ from urllib.parse import urljoin, urlparse
 import json
 from groq import Groq
 from langdetect import detect, LangDetectException
+import base64
 
 # Charger l'API key depuis un fichier
 def load_api_key(file_path='groq_api_key.txt'):
@@ -44,12 +45,6 @@ def save_company_info(company_info, json_file='Json_Files/results.json'):
     with open(json_file, 'w', encoding='utf-8') as file:
         json.dump(company_info, file, ensure_ascii=False, indent=4)
 
-from playwright.sync_api import sync_playwright
-import re
-from bs4 import BeautifulSoup
-import base64
-import os
-
 # Fonction pour capturer les mailto links avec Playwright avec une limite d'essais
 def capture_mailto_links(url):
     mailto_requests_urls = []
@@ -75,7 +70,7 @@ def capture_mailto_links(url):
         except Exception as e:
             print(f"Erreur lors de la navigation vers {url}: {e}")
             browser.close()
-            return mailto_requests_urls
+            return mailto_requests_urls, None
 
         # Obtenir le contenu HTML de la page
         html_content = page.content()
@@ -90,10 +85,16 @@ def capture_mailto_links(url):
             try:
                 element_str = str(element)
                 if "mail" in element_str.lower():
+                    href = element.get('href')
                     # Rechercher l'élément avec Playwright et cliquer dessus
-                    playwright_element = page.query_selector(f'a[href="{element["href"]}"]')
+                    playwright_element = page.query_selector(f'a[href="{href}"]')
                     if playwright_element:
-                        playwright_element.click()
+                        playwright_element.click(
+                            click_count=1,  # Nombre de clics
+                            delay=100,  # Délai en millisecondes entre chaque clic
+                            timeout=5000,  # Timeout en millisecondes
+                            force=True  # Forcer le clic même si l'élément est couvert ou hors de la vue
+                        )
                         page.wait_for_load_state('networkidle')
                         click_attempts += 1  # Incrémenter le compteur d'essais de clics
             except Exception as e:
@@ -149,61 +150,67 @@ def extract_emails_with_context(html_content, base_url, visited_mailto_links):
 
                 # Utiliser Playwright pour capturer les mails obfusqués
                 mailto_requests_urls = capture_mailto_links(base_url)
-                print(mailto_requests_urls)
                 mailto_emails = extract_emails_from_mailto_links(mailto_requests_urls)
                 for email in mailto_emails:
                     emails.add((email, context))
                     log_extraction('mailto_link', base_url, (email, context))
                 
                 visited_mailto_links.add(href)
+        
+        # Vérifier les emails visibles directement dans les éléments <a>
+        link_text = element.get_text(separator=' ', strip=True)
+        emails.update(extract_emails(link_text, html_content, 'default', email_pattern))
 
-    # Extraire les e-mails visibles directement
-    for match in re.finditer(email_pattern, visible_text):
-        email = match.group()
-        start = max(match.start() - 500, 0)
-        end = min(match.end() + 500, len(visible_text))
-        context = visible_text[start:end]
-        emails.add((email, context))
-        log_extraction('html_content', html_content, (email, context))
-        log_extraction('extract_emails_with_context', visible_text, (email, context))
+    # Extraire les e-mails visibles directement dans tout le texte visible
+    emails.update(extract_emails(visible_text, html_content, 'default', email_pattern))
 
     # Techniques d'obfuscation
-    # 1. Remplacement de caractères
-    obfuscated_emails = re.findall(r'\b\w+[.\w+]*\s*\[at\]\s*\w+[.\w+]*\s*\[dot\]\s*\w+\b', visible_text)
-    for obf_email in obfuscated_emails:
-        email = obf_email.replace('[at]', '@').replace('[dot]', '.').replace(' ', '')
-        emails.add((email, visible_text))
-        log_extraction('obfuscated_email', visible_text, email)
+    emails.update(extract_emails(visible_text, html_content, 'obfuscated', email_pattern))
+    emails.update(extract_emails(visible_text, html_content, 'encoded', email_pattern))
+    emails.update(extract_emails(visible_text, html_content, 'base64', email_pattern))
+    emails.update(extract_emails(visible_text, html_content, 'spaced', email_pattern))
 
-    # 2. Encodage HTML
-    encoded_emails = re.findall(r'&#\d+;', visible_text)
-    if encoded_emails:
-        email = ''.join([chr(int(code[2:-1])) for code in encoded_emails])
-        emails.add((email, visible_text))
-        log_extraction('encoded_email', visible_text, email)
-
-    # 3. Base64 Encodé
-    base64_emails = re.findall(r'[A-Za-z0-9+/=]{40,}', visible_text)
-    for b64_email in base64_emails:
-        try:
-            email = base64.b64decode(b64_email).decode('utf-8')
-            if re.match(email_pattern, email):
-                emails.add((email, visible_text))
-                log_extraction('base64_email', visible_text, email)
-        except Exception as e:
-            print(f"Erreur lors du décodage Base64: {e}")
-
-    # 4. Suppression des espaces
-    spaced_emails = re.findall(r'\b\w+\s*\w*\s*\[?\s*@\s*\]?\s*\w+\s*\.\s*\w+\b', visible_text)
-    for spaced_email in spaced_emails:
-        email = spaced_email.replace(' ', '').replace('[at]', '@').replace('[dot]', '.')
-        if re.match(email_pattern, email):
-            emails.add((email, visible_text))
-            log_extraction('spaced_email', visible_text, email)
-    
     print(list(emails))
 
     return list(emails)  # Convertir le set en liste
+
+
+
+def extract_emails(text, context, method='default', email_pattern=r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'):
+    emails = set()
+
+    if method == 'default':
+        # Extraire les e-mails visibles directement
+        matches = re.finditer(email_pattern, text)
+    elif method == 'obfuscated':
+        # Remplacement de caractères
+        obfuscated_pattern = r'\b\w+[.\w+]*\s*\[at\]\s*\w+[.\w+]*\s*\[dot\]\s*\w+\b'
+        matches = [re.match(email_pattern, match.group().replace('[at]', '@').replace('[dot]', '.').replace(' ', '')) for match in re.finditer(obfuscated_pattern, text) if re.match(email_pattern, match.group().replace('[at]', '@').replace('[dot]', '.').replace(' ', ''))]
+    elif method == 'encoded':
+        # Encodage HTML
+        encoded_emails = re.findall(r'&#\d+;', text)
+        matches = [re.match(email_pattern, ''.join([chr(int(code[2:-1])) for code in encoded_emails]))]
+    elif method == 'base64':
+        # Base64 Encodé
+        base64_pattern = r'[A-Za-z0-9+/=]{40,}'
+        matches = [re.match(email_pattern, base64.b64decode(match.group()).decode('utf-8')) for match in re.finditer(base64_pattern, text) if re.match(email_pattern, base64.b64decode(match.group()).decode('utf-8'))]
+    elif method == 'spaced':
+        # Suppression des espaces
+        spaced_pattern = r'\b\w+\s*\w*\s*\[?\s*@\s*\]?\s*\w+\s*\.\s*\w+\b'
+        matches = [re.match(email_pattern, match.group().replace(' ', '').replace('[at]', '@').replace('[dot]', '.')) for match in re.finditer(spaced_pattern, text) if re.match(email_pattern, match.group().replace(' ', '').replace('[at]', '@').replace('[dot]', '.'))]
+
+    for match in matches:
+        if match:
+            email = match.group()
+            start = max(match.start() - 500, 0)
+            end = min(match.end() + 500, len(text))
+            email_context = text[start:end]
+            emails.add((email, email_context))
+            log_extraction('html_content', context, (email, email_context))
+            log_extraction('extract_emails_with_context', text, (email, email_context))
+
+    return emails
+
 
 
 # Fonction pour récupérer le contenu d'une page web
