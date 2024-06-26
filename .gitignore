@@ -177,3 +177,7 @@ logs/*
 nomailcompagny.txt
 
 vitisited_links.txt
+
+client_secret.json
+
+attachments/*

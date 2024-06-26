@@ -6,16 +6,10 @@
         "addresses": "Chemin de la Rueyre 118, 1020 Renens VD"
     },
     {
-        "company_name": "ETAVIS Romandie SA",
-        "phone": "+41 79 940 99 69",
-        "website": "http://www.etavis.ch/fr/accueil",
-        "addresses": "Rue du Caudray 6, 1020 Renens VD"
-    },
-    {
         "company_name": "Gigatec SA",
         "phone": "024 423 89 64",
         "website": "http://www.gigatec.ch",
-        "addresses": "ZI Les Plans-Praz 28, 1337 Vallorbe"
+        "addresses": "Chemin des Plans-Praz 28, 1337 Vallorbe"
     },
     {
         "company_name": "JDC Electronic SA",
@@ -40,7 +34,7 @@
         "phone": "+41 22 899 18 18",
         "website": "http://www.st-sa.ch",
         "addresses": "67 rte du Pas-de-l´Echelle, Veyrier"
-    },,{
+    },{
         "company_name": "Sedelec SA Lausanne",
         "phone": "021 651 20 00",
         "website": "https://www.sedelec-lsne.ch/",
@@ -483,14 +477,5 @@
         "phone": "076 371 52 06",
         "website": "http://www.coratel.ch",
         "addresses": "Route du Verney 7, 1070 Puidoux"
-    },
-    {
-        "company_name": "ARHUB",
-        "phone": "",
-        "website": "",
-        "addresses": [],
-        "summary": "{ARHUB is a Swiss technology company specializing in innovative security solutions that prioritize preventative safety while maintaining individual privacy. Founded with a mission to take a leading role in the industry and enhance humanity\"s safety, the company offers a range of intelligent and innovative security solutions, including the AR6000C Alarm System, ARHUB Gateway, and ARCAM 360° Camera, which provide real-time monitoring and intervention on demand. These solutions detect potential threats before they occur, providing customers with a sense of safety and security. ARHUB\"s unique selling points include its cutting-edge technology, Swiss-quality products, and customer-centric approach. The company has achieved recognition from the Office for Economic Affairs and Innovation {SPEI} from Canton of Vaud, Switzerland, and has experienced a growth rate of over 100% annually. With a customer-focused culture and a passion for technology, ARHUB is committed to providing exceptional experiences and has built a growing community of partners and beta testers. The company seeks new partnerships and collaborations to drive innovation and growth.}",
-        "mails": [],
-        "personal_names": []
     }
 ]

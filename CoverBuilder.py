@@ -1,6 +1,8 @@
 import json
+import re
 import subprocess
 import os
+import sys
 from groq import Groq
 from langdetect import detect
 
@@ -103,10 +105,10 @@ def generate_destinataire_content(company_info, prompt_destinataire):
 
     def is_valid_format(text):
         lines = [line.strip() for line in text.split('\n') if line.strip()]
-        if not (2 <= len(lines) <= 4):
+        if not (2 <= len(lines) <= 5):
             return False
         for line in lines:
-            if len(line) > 32:
+            if (len(line) > 32 or ',' in line):
                 return False
         return True
 
@@ -116,7 +118,7 @@ def generate_destinataire_content(company_info, prompt_destinataire):
         {"role": "user", "content": base_prompt}
     ]
 
-    max_attempts = 4
+    max_attempts = 10
 
     for _ in range(max_attempts):
         response = client.chat.completions.create(
@@ -124,9 +126,10 @@ def generate_destinataire_content(company_info, prompt_destinataire):
             model="llama3-70b-8192"
         )
         response_text = response.choices[0].message.content
+        print(response_text)
         extracted_text = extract_text_from_response(response_text)
-
-        if ',' not in extracted_text and is_valid_format(extracted_text):
+        print(extracted_text)
+        if is_valid_format(extracted_text):
             print("Destinataire généré.")
             return extracted_text
         else:
@@ -253,12 +256,16 @@ def compile_latex(name):
             print(f"Erreur : Impossible de trouver pdflatex au chemin spécifié : {pdflatex_path}")
 
 # Fonction principale pour générer et sauvegarder le contenu pour chaque entreprise
-def build_covers(json_file='Json_Files/results.json'):
+def build_covers(json_file='Json_Files/results.json', specific_company_name=None):
     data = load_results(json_file)
     prompt_corp, prompt_destinataire, prompt_sujet, profile_text = load_prompts()
 
     for company_info in data:
         name = company_info["company_name"]
+        
+        if specific_company_name and name != specific_company_name:
+            continue  # Skip companies that don't match the specific company name
+
         print(f"Traitement de {name}...")
 
         # Générer le contenu de la lettre
@@ -276,4 +283,7 @@ def build_covers(json_file='Json_Files/results.json'):
         print(f"Traitement de {name} terminé.\n")
 
 if __name__ == "__main__":
-    build_covers()
+    specific_company_name = None
+    if len(sys.argv) > 1:
+        specific_company_name = sys.argv[1]
+    build_covers(specific_company_name=specific_company_name)

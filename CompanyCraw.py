@@ -41,9 +41,6 @@ def load_company_info(json_file='Json_Files/company_info.json'):
     except FileNotFoundError:
         return []
 
-def save_company_info(company_info, json_file='Json_Files/results.json'):
-    with open(json_file, 'w', encoding='utf-8') as file:
-        json.dump(company_info, file, ensure_ascii=False, indent=4)
 
 # Fonction pour capturer les mailto links avec Playwright avec une limite d'essais
 def capture_mailto_links(url):
@@ -75,7 +72,6 @@ def capture_mailto_links(url):
         # Obtenir le contenu HTML de la page
         html_content = page.content()
         soup = BeautifulSoup(html_content, 'html.parser')
-
         # Identifier et cliquer sur les éléments contenant "mail" n'importe où dans les attributs ou le texte
         mail_elements = soup.find_all('a')
         for element in mail_elements:
@@ -135,12 +131,12 @@ def extract_emails_with_context(html_content, base_url, visited_mailto_links):
     
     email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
     emails = set()  # Utilisation d'un set pour éviter les doublons
-
     # Identifier les éléments contenant "mail"
     mail_elements = soup.find_all('a', href=True)
     for element in mail_elements:
-        if "mail" in element.get_text(separator=' ', strip=True).lower():
-            href = element['href']
+        href = element['href'].lower()
+        element_text = element.get_text(separator=' ', strip=True).lower()
+        if "mail" in href or "mail" in element_text:
             if href not in visited_mailto_links:
                 # Récupérer le contexte autour de l'élément
                 element_context = element.get_text(separator=' ', strip=True)
@@ -170,10 +166,7 @@ def extract_emails_with_context(html_content, base_url, visited_mailto_links):
     emails.update(extract_emails(visible_text, html_content, 'base64', email_pattern))
     emails.update(extract_emails(visible_text, html_content, 'spaced', email_pattern))
 
-    print(list(emails))
-
     return list(emails)  # Convertir le set en liste
-
 
 
 def extract_emails(text, context, method='default', email_pattern=r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'):
@@ -210,8 +203,6 @@ def extract_emails(text, context, method='default', email_pattern=r'[a-zA-Z0-9._
             log_extraction('extract_emails_with_context', text, (email, email_context))
 
     return emails
-
-
 
 # Fonction pour récupérer le contenu d'une page web
 def fetch_page(url):
@@ -470,7 +461,6 @@ def extract_information(context):
     return chat_completion.choices[0].message.content.strip()
     
 def generate_summary(content, language, current_summary=""):
-    combined_content = current_summary + " " + content if current_summary else content
     chat_completion = client.chat.completions.create(
         messages=[
             {
@@ -486,15 +476,18 @@ def generate_summary(content, language, current_summary=""):
             {
                 "role": "user",
                 "content": (
-                    f"### Provided Information:\n"
-                    f"{combined_content}\n\n"
+                    f"### Current summary:\n"
+                    f"{current_summary}\n\n"
+                    f"### Additionnal data to complete the summary:\n"
+                    f"{content}\n\n"
                     f"### Task:\n"
                     f"Using the provided information, generate a detailed and coherent company description. "
                     f"Include the company's history, mission, key products or services, target market, unique selling points, recent achievements, and company culture if available. "
                     f"If specific details are not available, summarize the given information as effectively as possible. "
                     f"Output the description in the format: (description)."
                     f"The final output should be in {language} and enclosed in parentheses ()."
-                    f"If there is a personal name or role mentioned, say @info@ outside the parentheses."
+                    f"Erase the @info@ and it's information from the input text"
+                    f"If there is a personal name or role mentioned in the Additional data, say @info@ outside the parentheses."
                 )
             }
         ],
@@ -521,63 +514,73 @@ def extract_company_name(summary):
     )
     return chat_completion.choices[0].message.content.strip()
 
-def add_intermediate_result(result, results_file='Json_Files/results.json'):
-    # Charger les résultats existants du fichier results.json
+def load_json_file(file_path):
     try:
-        with open(results_file, 'r', encoding='utf-8') as file:
-            existing_results = json.load(file)
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return json.load(file)
     except FileNotFoundError:
-        existing_results = []
+        return []
 
-    # Ajouter le nouveau résultat
-    existing_results.append(result)
-
-    # Sauvegarder les résultats mis à jour dans le fichier results.json
-    save_company_info(existing_results, results_file)
+def save_json_file(data, file_path):
+    with open(file_path, 'w', encoding='utf-8') as file:
+        json.dump(data, file, ensure_ascii=False, indent=4)
 
 
-def update_company_info(input, company_info_file='Json_Files/company_info.json', result_file='Json_Files/results.json'):
-    company_info = load_company_info(company_info_file)
+def update_company_data(result, results_file='Json_Files/results.json', company_info_file='Json_Files/company_info.json'):
+    # Charger les résultats existants
+    existing_results = load_json_file(results_file)
+    company_info_list = load_json_file(company_info_file)
+
+    # Vérifier s'il y a des mails dans le résultat
+    if not result.get("mails"):
+        print(f"Aucun email trouvé pour {result.get('company_name')}. Ignoré.")
+        return
+
+    # Chercher l'entreprise correspondante dans company_info.json
+    company_info = None
+    for company in company_info_list:
+        if company["website"] == result["website"]:
+            company_info = company
+            break
+
+    if not company_info:
+        print(f"Aucune information trouvée pour {result.get('company_name')} dans company_info.json. Ignoré.")
+        return
+
+    # Construire le résultat final en utilisant les informations de company_info comme base
+    final_result = {
+        "company_name": company_info.get("company_name", result.get("company_name", "")),
+        "phone": company_info.get("phone", ""),
+        "website": company_info.get("website", result.get("website", "")),
+        "addresses": company_info.get("addresses", []) or result.get("addresses", []),
+        "summary": company_info.get("summary", result.get("summary", "")),
+        "mails": company_info.get("mails", []) or result.get("mails", []),
+        "personal_names": company_info.get("personal_names", []) or result.get("personal_names", [])
+    }
+
+    # Chercher l'entreprise correspondante dans les résultats existants
     updated = False
-
-    for company in company_info:
-        if company["website"] == input["website"]:
-            # Mise à jour des informations existantes uniquement si elles sont absentes
-            if not company.get("summary"):
-                company["summary"] = input.get("summary", "")
-            if not company.get("mails"):
-                company["mails"] = input.get("mails", [])
-            if not company.get("addresses"):
-                company["addresses"] = input.get("addresses", [])
-            if not company.get("personal_names"):
-                company["personal_names"] = input.get("personal_names", [])
+    for i, existing_result in enumerate(existing_results):
+        if existing_result["website"] == final_result["website"]:
+            # Mettre à jour l'entrée existante avec les informations combinées
+            existing_results[i] = final_result
             updated = True
             break
 
     if not updated:
-        # Ajout de nouvelles informations si l'URL n'est pas trouvée
-        company_info.append({
-            "company_name": input.get("company_name", ""),
-            "phone": "",
-            "website": input.get("website", ""),
-            "addresses": input.get("addresses", []),
-            "summary": input.get("summary", ""),
-            "mails": input.get("mails", []),
-            "personal_names": input.get("personal_names", [])
-        })
+        # Ajouter la nouvelle entrée si l'entreprise n'est pas trouvée dans les résultats existants
+        existing_results.append(final_result)
 
-    # Filtrer les entreprises sans mails
-    company_info = [company for company in company_info if company.get("mails")]
-
-    save_company_info(company_info, result_file)
-    print("Company info updated successfully.")
-
+    # Sauvegarder les résultats mis à jour dans le fichier results.json
+    save_json_file(existing_results, results_file)
+    print(f"Informations de l'entreprise mises à jour pour {result.get('company_name')}.")
+    
 # Fonction pour exécuter le processus complet de crawl et de génération de résultats
 def main(company_info_file='Json_Files/company_info.json', results_file='Json_Files/results.json', max_pages=20):
     # Charger les informations des entreprises depuis company_info.json
     company_info = load_company_info(company_info_file)
 
-    results = []
+    #results = []
 
     for company in company_info:
         base_url = company["website"]
@@ -616,15 +619,9 @@ def main(company_info_file='Json_Files/company_info.json', results_file='Json_Fi
             "personal_names": list(names),
             "website": base_url  # Ajouter l'URL de base au résultat
         }
-
-        # Ajouter le résultat intermédiaire au fichier results.json
-        add_intermediate_result(result, results_file)
-
-        results.append(result)
+        update_company_data(result)
+        #results.append(result)
         
-    # Mettre à jour les informations des entreprises dans company_info.json
-    update_company_info(result, company_info_file, results_file)
-    print("Mise à jour de company_info.json terminée.")
 
 if __name__ == "__main__":
     main()

@@ -19,7 +19,7 @@
 
 ### Expected Response
 {  
-Application for the Software Developer position at Tech Innovators  
+Application a the Software Developer position at Tech Innovators  
 }
 
 ## Reminder / Important

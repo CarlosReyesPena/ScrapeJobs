@@ -5,8 +5,8 @@
 1. The structure of the recipient information should include the following elements:
     - **Company Name:** Use the value from {"company_name"}.
     - **Full Name:** Choose the most appropriate name for handling applications based on the following priority:
-        1. If "HR" or "Human Resources" is in the title from {"personal_names"}, use that name.
-        2. If the above is not available, use any name with "Head" or "Chief" in the title.
+        1. If "HR" or "Human Resources" is in the title from {"personal_names"}, use that name (without the role).
+        2. If the above is not available, use any name with "Head" or "Chief" in the title (without the role).
         3. If no appropriate name is found, use the equivalent to "To whom it may concern" in {language}.
     - **Company Address:** If there are any addresses in {"addresses"}, include them. Ensure each part of the address is on a separate line.
 
@@ -15,6 +15,8 @@
 4. The response must be in {language}.
 5. Enclose the entire response in curly braces `{}`.
 6. Ensure to select the correct company name and personal name from the provided data.
+7. If there is a country in the address, do not include it.
+8. The address must be between 2 and 4 lines.
 
 ## Example in French
 ### Company Information
