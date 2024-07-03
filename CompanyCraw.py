@@ -2,6 +2,7 @@ import os
 import re
 import requests
 from playwright.sync_api import sync_playwright
+from pathlib import Path
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 import json
@@ -36,18 +37,6 @@ def load_lists(json_file_path='Json_Files/lists.json'):
         print(f"Error loading lists: {e}")
         return [], []
 
-# Fonction pour charger les mots-clés à partir d'un fichier JSON
-def load_keywords(json_file_path='Json_Files/keywords.json'):
-    try:
-        with open(json_file_path, 'r', encoding='utf-8') as file:
-            data = json.load(file)
-        keywords_cat1 = data['cat_1']
-        keywords_cat2 = data['cat_2']
-        return keywords_cat1, keywords_cat2
-    except Exception as e:
-        print(f"Error loading keywords: {e}")
-        return [], []
-
 def load_company_info(json_file='Json_Files/company_info.json'):
     try:
         with open(json_file, 'r', encoding='utf-8') as file:
@@ -58,14 +47,41 @@ def load_company_info(json_file='Json_Files/company_info.json'):
         print(f"Error loading company info: {e}")
         return []
 
+# Fonction pour obtenir les chemins des extensions
+def get_extension_paths(extensions_dir):
+    extension_paths = []
+    for path in Path(extensions_dir).iterdir():
+        if path.is_dir():
+            extension_paths.append(str(path.resolve()))
+    return extension_paths
+
+# Créer un profil persistant avec les préférences et extensions
+def create_persistent_profile():
+    base_dir = os.path.join(os.getcwd(), 'Chromium')
+    user_data_dir = os.path.join(base_dir, 'user_data_dir')
+    extensions_dir = os.path.join(base_dir, 'Extensions')
+
+    os.makedirs(user_data_dir, exist_ok=True)
+    os.makedirs(extensions_dir, exist_ok=True)
+
+    extension_paths = get_extension_paths(extensions_dir)
+    extensions_args = []
+    for path in extension_paths:
+        extensions_args.append(f'--disable-extensions-except={path}')
+        extensions_args.append(f'--load-extension={path}')
+
+    return user_data_dir, extensions_args
+
 # Fonction pour capturer les mailto links avec Playwright avec une limite d'essais
 def capture_mailto_links(url):
     mailto_requests_urls = []
     click_attempts = 0  # Initialiser le compteur d'essais de clics
     max_clicks = 10  # Limite des clics
 
+    user_data_dir, extensions_args = create_persistent_profile()
+
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)  # Lancer le navigateur en mode "headless"
+        browser = p.chromium.launch_persistent_context(user_data_dir, headless=False, args=extensions_args)  # Utiliser un profil utilisateur persistant
         page = browser.new_page()
 
         # Fonction pour capturer les requêtes réseau
@@ -126,6 +142,7 @@ def capture_mailto_links(url):
         browser.close()
 
     return mailto_requests_urls
+
 
 
 # Fonction pour extraire les e-mails des URLs "mailto:"
@@ -216,6 +233,7 @@ def extract_emails(text, context, method='default', email_pattern=r'[a-zA-Z0-9._
                 except (base64.binascii.Error, UnicodeDecodeError) as e:
                     print(f"Base64 decoding error: {e}")
         elif method == 'spaced':
+            #print(text)
             spaced_pattern = r'\b\w+\s*\w*\s*\[?\s*@\s*\]?\s*\w+\s*\.\s*\w+\b'
             matches = [
                 re.match(email_pattern, match.group().replace(' ', '').replace('[at]', '@').replace('[dot]', '.'))
@@ -277,13 +295,12 @@ def get_internal_links(base_url, html_content, list_1, list_2):
     cat1_links = set()
     cat2_links = set()
 
+    # Rechercher toutes les balises <a> avec l'attribut href
     for link in soup.find_all('a', href=True):
         href = link['href']
         link_text = link.get_text(separator=' ', strip=True)
-        if href.startswith('/'):
-            full_url = urljoin(base_url, href)
-        else:
-            full_url = href
+        # Construire l'URL complète en utilisant urljoin
+        full_url = urljoin(base_url, href)
 
         parsed_full_url = urlparse(full_url)
         if base_domain in parsed_full_url.netloc:
@@ -293,26 +310,32 @@ def get_internal_links(base_url, html_content, list_1, list_2):
                 elif contains_keyword(full_url, link_text, list_2) or full_url in list_2:
                     cat2_links.add(full_url)
 
+    # Charger les liens existants à partir du fichier classified_links.json
     try:
         with open('classified_links.json', 'r', encoding='utf-8') as file:
             existing_links = json.load(file)
     except FileNotFoundError:
-        existing_links = {
-            "cat1_links": [],
-            "cat2_links": []
-        }
+        existing_links = {"cat1_links": [], "cat2_links": []}
 
+    # Mettre à jour les liens existants avec les nouveaux liens trouvés
     existing_links["cat1_links"] = list(set(existing_links["cat1_links"]) | cat1_links)
     existing_links["cat2_links"] = list(set(existing_links["cat2_links"]) | cat2_links)
 
+    # Enregistrer les liens mis à jour dans le fichier classified_links.json
     with open('classified_links.json', 'w', encoding='utf-8') as file:
         json.dump(existing_links, file, ensure_ascii=False, indent=4)
 
     return cat1_links, cat2_links
 
-# Fonction pour vérifier si une URL ne contient pas d'extension
+# Fonction pour vérifier si une URL ne contient pas d'extension non-web
 def has_extension(url):
-    return re.search(r'\.\w+$', url)
+    # Liste des extensions de fichiers web courantes que nous souhaitons exclure
+    web_extensions = ['.html', '.htm', '.php', '.asp', '.aspx', '.jsp']
+    # Extraire l'extension de l'URL
+    extension = re.search(r'\.\w+$', url)
+    if extension:
+        return extension.group() not in web_extensions
+    return False
 
 def clean_json_string(json_str):
     json_str = json_str.replace("'", '"')

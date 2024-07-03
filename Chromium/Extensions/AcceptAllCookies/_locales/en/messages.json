@@ -1,0 +1,37 @@
+{
+   "addToWhitelist": {
+      "message": "+ Add to Whitelist"
+   },
+   "extensionDescription": {
+      "description": "Description of the extension.",
+      "message": "Accepts necessary cookie policies for smooth website navigation, without deleting cookies."
+   },
+   "extensionName": {
+      "description": "Name of the extension.",
+      "message": "Accept all cookies"
+   },
+   "notWorkingOnThisPage": {
+      "message": "Not working on this page"
+   },
+   "optionsButton": {
+      "description": "Text for SAVE button.",
+      "message": "Save"
+   },
+   "optionsWhitelist": {
+      "description": "Options text for whitelist box.",
+      "message": "List of all whitelisted websites"
+   },
+   "optionsWhitelistPerLine": {
+      "description": "Options text for whitelist box.",
+      "message": "One website per line:"
+   },
+   "rateUsLabel": {
+      "message": "Rate Us!"
+   },
+   "removeFromWhitelist": {
+      "message": "Remove from whitelist"
+   },
+   "saved": {
+      "message": "Saved!"
+   }
+}
