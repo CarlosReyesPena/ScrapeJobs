@@ -8,31 +8,45 @@ import json
 from groq import Groq
 from langdetect import detect, LangDetectException
 import base64
+import time
+
+RETRY_ATTEMPTS = 20
+RETRY_DELAY = 5
 
 # Charger l'API key depuis un fichier
 def load_api_key(file_path='groq_api_key.txt'):
-    with open(file_path, 'r', encoding='utf-8') as file:
-        return file.read().strip()
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return file.read().strip()
+    except Exception as e:
+        print(f"Error loading API key: {e}")
+        return None
 
 # Configuration de l'API Meta3
 api_key = load_api_key()
-client = Groq(api_key=api_key)
+client = Groq(api_key=api_key) if api_key else None
 
 # Fonction pour charger les mots-clés à partir d'un fichier JSON
 def load_lists(json_file_path='Json_Files/lists.json'):
-    with open(json_file_path, 'r', encoding='utf-8') as file:
-        data = json.load(file)
-    return data['List_1'], data['List_2']
+    try:
+        with open(json_file_path, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+        return data['List_1'], data['List_2']
+    except Exception as e:
+        print(f"Error loading lists: {e}")
+        return [], []
 
 # Fonction pour charger les mots-clés à partir d'un fichier JSON
 def load_keywords(json_file_path='Json_Files/keywords.json'):
-    with open(json_file_path, 'r', encoding='utf-8') as file:
-        data = json.load(file)
-    
-    keywords_cat1 = data['cat_1']
-    keywords_cat2 = data['cat_2']
-    
-    return keywords_cat1, keywords_cat2
+    try:
+        with open(json_file_path, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+        keywords_cat1 = data['cat_1']
+        keywords_cat2 = data['cat_2']
+        return keywords_cat1, keywords_cat2
+    except Exception as e:
+        print(f"Error loading keywords: {e}")
+        return [], []
 
 def load_company_info(json_file='Json_Files/company_info.json'):
     try:
@@ -40,7 +54,9 @@ def load_company_info(json_file='Json_Files/company_info.json'):
             return json.load(file)
     except FileNotFoundError:
         return []
-
+    except Exception as e:
+        print(f"Error loading company info: {e}")
+        return []
 
 # Fonction pour capturer les mailto links avec Playwright avec une limite d'essais
 def capture_mailto_links(url):
@@ -60,18 +76,32 @@ def capture_mailto_links(url):
         # Écouter les événements de requêtes réseau
         page.on('request', capture_request)
 
-        try:
-            # Naviguer vers l'URL
-            page.goto(url)
-            page.wait_for_load_state('networkidle')
-        except Exception as e:
-            print(f"Erreur lors de la navigation vers {url}: {e}")
-            browser.close()
-            return mailto_requests_urls, None
+        for attempt in range(RETRY_ATTEMPTS):
+            try:
+                # Naviguer vers l'URL
+                page.goto(url, timeout=30000)
+                page.wait_for_load_state('networkidle')
+                break  # Sortir de la boucle si la navigation réussit
+            except Exception as e:
+                print(f"Error navigating to {url}: {e}")
+                if attempt < RETRY_ATTEMPTS - 1:
+                    print(f"Retrying in {RETRY_DELAY} seconds...")
+                    time.sleep(RETRY_DELAY)
+                else:
+                    print(f"Failed to navigate to {url} after {RETRY_ATTEMPTS} attempts.")
+                    browser.close()
+                    return mailto_requests_urls
+
+        # Défilement lent pour s'assurer que tous les éléments sont chargés
+        scroll_height = page.evaluate('document.body.scrollHeight')
+        for scroll in range(0, scroll_height, 300):
+            page.evaluate(f'window.scrollTo(0, {scroll})')
+            time.sleep(1)
 
         # Obtenir le contenu HTML de la page
         html_content = page.content()
         soup = BeautifulSoup(html_content, 'html.parser')
+
         # Identifier et cliquer sur les éléments contenant "mail" n'importe où dans les attributs ou le texte
         mail_elements = soup.find_all('a')
         for element in mail_elements:
@@ -82,15 +112,10 @@ def capture_mailto_links(url):
                 element_str = str(element)
                 if "mail" in element_str.lower():
                     href = element.get('href')
-                    # Rechercher l'élément avec Playwright et cliquer dessus
+                    # Rechercher l'élément avec Playwright et cliquer dessus via JavaScript
                     playwright_element = page.query_selector(f'a[href="{href}"]')
                     if playwright_element:
-                        playwright_element.click(
-                            click_count=1,  # Nombre de clics
-                            delay=100,  # Délai en millisecondes entre chaque clic
-                            timeout=5000,  # Timeout en millisecondes
-                            force=True  # Forcer le clic même si l'élément est couvert ou hors de la vue
-                        )
+                        page.evaluate('element => { element.scrollIntoView(); element.click(); }', playwright_element)
                         page.wait_for_load_state('networkidle')
                         click_attempts += 1  # Incrémenter le compteur d'essais de clics
             except Exception as e:
@@ -101,6 +126,7 @@ def capture_mailto_links(url):
         browser.close()
 
     return mailto_requests_urls
+
 
 # Fonction pour extraire les e-mails des URLs "mailto:"
 def extract_emails_from_mailto_links(mailto_links):
@@ -127,24 +153,21 @@ def log_extraction(function_name, input_text, result):
 # Fonction pour extraire les e-mails d'une page HTML et utiliser Playwright si nécessaire
 def extract_emails_with_context(html_content, base_url, visited_mailto_links):
     soup = BeautifulSoup(html_content, 'html.parser')
-    visible_text = soup.get_text(separator='\n', strip=True)  # Conserver les lignes
+    visible_text = soup.get_text(separator='\n', strip=True)
     
     email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-    emails = set()  # Utilisation d'un set pour éviter les doublons
-    # Identifier les éléments contenant "mail"
+    emails = set()
     mail_elements = soup.find_all('a', href=True)
     for element in mail_elements:
         href = element['href'].lower()
         element_text = element.get_text(separator=' ', strip=True).lower()
         if "mail" in href or "mail" in element_text:
             if href not in visited_mailto_links:
-                # Récupérer le contexte autour de l'élément
                 element_context = element.get_text(separator=' ', strip=True)
                 start = max(visible_text.find(element_context) - 500, 0)
                 end = min(visible_text.find(element_context) + len(element_context) + 500, len(visible_text))
                 context = visible_text[start:end]
 
-                # Utiliser Playwright pour capturer les mails obfusqués
                 mailto_requests_urls = capture_mailto_links(base_url)
                 mailto_emails = extract_emails_from_mailto_links(mailto_requests_urls)
                 for email in mailto_emails:
@@ -153,54 +176,64 @@ def extract_emails_with_context(html_content, base_url, visited_mailto_links):
                 
                 visited_mailto_links.add(href)
         
-        # Vérifier les emails visibles directement dans les éléments <a>
         link_text = element.get_text(separator=' ', strip=True)
         emails.update(extract_emails(link_text, html_content, 'default', email_pattern))
 
-    # Extraire les e-mails visibles directement dans tout le texte visible
     emails.update(extract_emails(visible_text, html_content, 'default', email_pattern))
 
-    # Techniques d'obfuscation
     emails.update(extract_emails(visible_text, html_content, 'obfuscated', email_pattern))
     emails.update(extract_emails(visible_text, html_content, 'encoded', email_pattern))
     emails.update(extract_emails(visible_text, html_content, 'base64', email_pattern))
     emails.update(extract_emails(visible_text, html_content, 'spaced', email_pattern))
 
-    return list(emails)  # Convertir le set en liste
-
+    return list(emails)
 
 def extract_emails(text, context, method='default', email_pattern=r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'):
     emails = set()
 
-    if method == 'default':
-        # Extraire les e-mails visibles directement
-        matches = re.finditer(email_pattern, text)
-    elif method == 'obfuscated':
-        # Remplacement de caractères
-        obfuscated_pattern = r'\b\w+[.\w+]*\s*\[at\]\s*\w+[.\w+]*\s*\[dot\]\s*\w+\b'
-        matches = [re.match(email_pattern, match.group().replace('[at]', '@').replace('[dot]', '.').replace(' ', '')) for match in re.finditer(obfuscated_pattern, text) if re.match(email_pattern, match.group().replace('[at]', '@').replace('[dot]', '.').replace(' ', ''))]
-    elif method == 'encoded':
-        # Encodage HTML
-        encoded_emails = re.findall(r'&#\d+;', text)
-        matches = [re.match(email_pattern, ''.join([chr(int(code[2:-1])) for code in encoded_emails]))]
-    elif method == 'base64':
-        # Base64 Encodé
-        base64_pattern = r'[A-Za-z0-9+/=]{40,}'
-        matches = [re.match(email_pattern, base64.b64decode(match.group()).decode('utf-8')) for match in re.finditer(base64_pattern, text) if re.match(email_pattern, base64.b64decode(match.group()).decode('utf-8'))]
-    elif method == 'spaced':
-        # Suppression des espaces
-        spaced_pattern = r'\b\w+\s*\w*\s*\[?\s*@\s*\]?\s*\w+\s*\.\s*\w+\b'
-        matches = [re.match(email_pattern, match.group().replace(' ', '').replace('[at]', '@').replace('[dot]', '.')) for match in re.finditer(spaced_pattern, text) if re.match(email_pattern, match.group().replace(' ', '').replace('[at]', '@').replace('[dot]', '.'))]
+    try:
+        if method == 'default':
+            matches = re.finditer(email_pattern, text)
+        elif method == 'obfuscated':
+            obfuscated_pattern = r'\b\w+[.\w+]*\s*\[at\]\s*\w+[.\w+]*\s*\[dot\]\s*\w+\b'
+            matches = [
+                re.match(email_pattern, match.group().replace('[at]', '@').replace('[dot]', '.').replace(' ', ''))
+                for match in re.finditer(obfuscated_pattern, text)
+                if re.match(email_pattern, match.group().replace('[at]', '@').replace('[dot]', '.').replace(' ', ''))
+            ]
+        elif method == 'encoded':
+            encoded_emails = re.findall(r'&#\d+;', text)
+            decoded_email = ''.join([chr(int(code[2:-1])) for code in encoded_emails])
+            matches = [re.match(email_pattern, decoded_email)]
+        elif method == 'base64':
+            base64_pattern = r'[A-Za-z0-9+/=]{40,}'
+            matches = []
+            for match in re.finditer(base64_pattern, text):
+                try:
+                    decoded_email = base64.b64decode(match.group()).decode('utf-8')
+                    if re.match(email_pattern, decoded_email):
+                        matches.append(re.match(email_pattern, decoded_email))
+                except (base64.binascii.Error, UnicodeDecodeError) as e:
+                    print(f"Base64 decoding error: {e}")
+        elif method == 'spaced':
+            spaced_pattern = r'\b\w+\s*\w*\s*\[?\s*@\s*\]?\s*\w+\s*\.\s*\w+\b'
+            matches = [
+                re.match(email_pattern, match.group().replace(' ', '').replace('[at]', '@').replace('[dot]', '.'))
+                for match in re.finditer(spaced_pattern, text)
+                if re.match(email_pattern, match.group().replace(' ', '').replace('[at]', '@').replace('[dot]', '.'))
+            ]
 
-    for match in matches:
-        if match:
-            email = match.group()
-            start = max(match.start() - 500, 0)
-            end = min(match.end() + 500, len(text))
-            email_context = text[start:end]
-            emails.add((email, email_context))
-            log_extraction('html_content', context, (email, email_context))
-            log_extraction('extract_emails_with_context', text, (email, email_context))
+        for match in matches:
+            if match:
+                email = match.group()
+                start = max(match.start() - 500, 0)
+                end = min(match.end() + 500, len(text))
+                email_context = text[start:end]
+                emails.add((email, email_context))
+                log_extraction('html_content', context, (email, email_context))
+                log_extraction('extract_emails_with_context', text, (email, email_context))
+    except Exception as e:
+        print(f"An error occurred during email extraction: {e}")
 
     return emails
 
@@ -209,16 +242,22 @@ def fetch_page(url):
     headers = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/78.0.3904.70 Chrome/78.0.3904.70 Safari/537.36'
     }
-    try:
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.text
-        else:
-            print(f"Erreur HTTP {response.status_code} lors de la récupération de {url}")
-            return ""
-    except requests.RequestException as e:
-        print(f"Erreur lors de la récupération de {url}: {e}")
-        return ""
+    for attempt in range(RETRY_ATTEMPTS):
+        try:
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                return response.text
+            else:
+                print(f"HTTP error {response.status_code} while fetching {url}")
+        except requests.RequestException as e:
+            print(f"Error fetching {url}: {e}")
+            if attempt < RETRY_ATTEMPTS - 1:
+                print(f"Retrying in {RETRY_DELAY} seconds...")
+                time.sleep(RETRY_DELAY)
+            else:
+                print(f"Failed to fetch {url} after {RETRY_ATTEMPTS} attempts.")
+    return ""
+
 
 # Fonction pour normaliser les textes en minuscules et remplacer les caractères non alphabétiques par des espaces
 def normalize_text(text):
@@ -254,7 +293,6 @@ def get_internal_links(base_url, html_content, list_1, list_2):
                 elif contains_keyword(full_url, link_text, list_2) or full_url in list_2:
                     cat2_links.add(full_url)
 
-    # Lecture du fichier JSON existant pour ajouter les nouveaux liens
     try:
         with open('classified_links.json', 'r', encoding='utf-8') as file:
             existing_links = json.load(file)
@@ -263,15 +301,13 @@ def get_internal_links(base_url, html_content, list_1, list_2):
             "cat1_links": [],
             "cat2_links": []
         }
-    
-    # Fusion des nouveaux liens avec ceux existants en évitant les doublons
+
     existing_links["cat1_links"] = list(set(existing_links["cat1_links"]) | cat1_links)
     existing_links["cat2_links"] = list(set(existing_links["cat2_links"]) | cat2_links)
-    
-    # Écriture des liens mis à jour dans le fichier JSON
+
     with open('classified_links.json', 'w', encoding='utf-8') as file:
         json.dump(existing_links, file, ensure_ascii=False, indent=4)
-    
+
     return cat1_links, cat2_links
 
 # Fonction pour vérifier si une URL ne contient pas d'extension
@@ -279,17 +315,12 @@ def has_extension(url):
     return re.search(r'\.\w+$', url)
 
 def clean_json_string(json_str):
-    # Remplacer les guillemets simples par des guillemets doubles
     json_str = json_str.replace("'", '"')
-    
-    # Remplacer les parenthèses par des accolades
     json_str = json_str.replace("(", "{").replace(")", "}")
-    
     return json_str
 
 def extract_text_within_braces(text):
     try:
-        # Recherche le début et la fin des accolades
         start_index = text.index('{')
         end_index = text.rindex('}') + 1
         return text[start_index:end_index]
@@ -300,16 +331,11 @@ def extract_text_within_braces(text):
 def extract_address(context):
     result = extract_information(context)
     try:
-        # Recherche le début et la fin du JSON
         clean_result = clean_json_string(result)
-        
         json_str = extract_text_within_braces(clean_result)
-        
         return json.loads(json_str)
     except (ValueError, json.JSONDecodeError) as e:
         print(f"Error extracting or decoding JSON: {e}")
-        
-        # Handling incorrect format by informing the user and retrying extraction
         try:
             corrected_result = extract_information(
                 context + " The previous output was not in the correct JSON format. Please ensure the JSON is properly formatted."
@@ -320,7 +346,7 @@ def extract_address(context):
         except (ValueError, json.JSONDecodeError) as e:
             print(f"Error extracting or decoding JSON after retry: {e}")
             return {"addresses": [], "names_and_roles": []}
-    
+
 def chunk_text(text, chunk_size):
     words = text.split()
     for i in range(0, len(words), chunk_size):
@@ -337,14 +363,13 @@ def crawl_website(base_url, max_pages):
     visited_links_order = []
     visited_mailto_ref = set()
 
-    # Chargement des listes List_1 et List_2
     list_1, list_2 = load_lists("Json_Files/lists.json")
 
-    to_visit = [[] for _ in range(2)]  # Une liste de listes pour les catégories : [list_1_links, list_2_links]
+    to_visit = [[] for _ in range(2)]
 
     html_content = fetch_page(base_url)
     
-    to_visit[0].append(base_url)  # Ajouter l'URL de départ dans la catégorie "list_1_links"
+    to_visit[0].append(base_url)
     if html_content:
         cat1_links, cat2_links = get_internal_links(base_url, html_content, list_1, list_2)
         to_visit[0].extend(list(cat1_links))
@@ -369,9 +394,8 @@ def crawl_website(base_url, max_pages):
                 soup = BeautifulSoup(html_content, 'html.parser')
                 visible_text = soup.get_text(separator=' ', strip=True)
                 
-                # Extraction des e-mails seulement sur la première page et les pages de list_1
                 if current_category == 0 or current_url in cat1_links:
-                    emails_with_context = extract_emails_with_context(html_content,current_url,visited_mailto_ref)
+                    emails_with_context = extract_emails_with_context(html_content, current_url, visited_mailto_ref)
                     for email, context in emails_with_context:
                         print(f"Email found: {email}")
                         if email not in processed_emails:
@@ -380,11 +404,9 @@ def crawl_website(base_url, max_pages):
                         if email not in emails:
                             emails.append(email)
                 
-                # Ajouter le texte visible pour le résumé seulement sur la première page et les pages de List_2
                 if current_category == 0 or current_url in cat2_links:
                     summary_texts.append(visible_text)
                 
-                # Obtenir les liens internes de la page courante et les ajouter dans l'ordre de priorité
                 cat1_links, cat2_links = get_internal_links(current_url, html_content, list_1, list_2)
                 to_visit[0].extend(list(cat1_links - visited_urls))
                 to_visit[1].extend(list(cat2_links - visited_urls))
@@ -393,7 +415,6 @@ def crawl_website(base_url, max_pages):
         if current_category >= len(to_visit):
             break
     
-    # Écriture des liens visités dans un fichier texte
     with open('visited_links.txt', 'w', encoding='utf-8') as file:
         for link in visited_links_order:
             file.write(link + '\n')
@@ -403,26 +424,23 @@ def crawl_website(base_url, max_pages):
 def process_information(context, addresses, names):
     information = extract_address(context)
 
-    # Utilisation de sets pour éviter les doublons
     unique_addresses = set(addresses)
     unique_names = set(names)
 
     if information["addresses"]:
         for address in information["addresses"]:
             print(f"Address found: {address}")
-            unique_addresses.add(address)  # Ajout des adresses uniques
+            unique_addresses.add(address)
 
     if information["names_and_roles"]:
         for name in information["names_and_roles"]:
             print(f"Name found: {name}")
-            unique_names.add(name)  # Ajout des noms uniques
+            unique_names.add(name)
 
-    # Convertir les sets en listes
     addresses[:] = list(unique_addresses)
     names[:] = list(unique_names)
 
     return information
-
 
 # Fonction pour détecter la langue du contenu
 def detect_language(text):
@@ -435,84 +453,102 @@ def check_for_info_tag(summary_response):
     return "@info@" in summary_response
     
 def extract_information(context):
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are an expert in extracting specific information from text and providing structured outputs in JSON format. "
-                    "Your task is to identify and extract physical addresses and the names of key figures along with their roles from the provided text. "
-                    "Ensure the output is accurate and formatted correctly, avoiding redundancy."
-                )
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"From the following text: {context}, extract the physical addresses and person names with their roles. "
-                    f"Do not include any post office boxes. Provide the results in the following JSON format: "
-                    f"{{\"addresses\": [\"address1\", \"address2\", ...], \"names_and_roles\": [\"Person Name, Person Role\", ...]}}. "
-                    f"Do not include addresses that are not related to the company. Exclude any person that is not a key figure in the company. "
-                    f"Ensure each name is correctly paired with their role and formatted as \"Person Name, Person Role\" without any extra structure or redundancy."
-                )
-            }
-        ],
-        model="llama3-70b-8192",
-    )
-    return chat_completion.choices[0].message.content.strip()
-    
+    for attempt in range(RETRY_ATTEMPTS):
+        try:
+            chat_completion = client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are an expert in extracting specific information from text and providing structured outputs in JSON format. "
+                            "Your task is to identify and extract physical addresses and the names of key figures along with their roles from the provided text. "
+                            "Ensure the output is accurate and formatted correctly, avoiding redundancy."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"From the following text: {context}, extract the physical addresses and person names with their roles. "
+                            f"Do not include any post office boxes. Provide the results in the following JSON format: "
+                            f"{{\"addresses\": [\"address1\", \"address2\", ...], \"names_and_roles\": [\"Person Name, Person Role\", ...]}}. "
+                            f"Do not include addresses that are not related to the company. Exclude any person that is not a key figure in the company. "
+                            f"Ensure each name is correctly paired with their role and formatted as \"Person Name, Person Role\" without any extra structure or redundancy."
+                        )
+                    }
+                ],
+                model="llama3-70b-8192",
+            )
+            return chat_completion.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"Error extracting information: {e}")
+            time.sleep(RETRY_DELAY)
+    return ""
+
 def generate_summary(content, language, current_summary=""):
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are an expert in summarizing company information. "
-                    "Your task is to create a comprehensive and coherent company description suitable for a cover letter. "
-                    "The description should be detailed and include, if available, the following elements: "
-                    "company history, mission, key products or services, target market, unique selling points, recent achievements, and company culture. "
-                    "If certain details are missing, focus on summarizing the provided information effectively. "
-                )
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"### Current summary:\n"
-                    f"{current_summary}\n\n"
-                    f"### Additionnal data to complete the summary:\n"
-                    f"{content}\n\n"
-                    f"### Task:\n"
-                    f"Using the provided information, generate a detailed and coherent company description. "
-                    f"Include the company's history, mission, key products or services, target market, unique selling points, recent achievements, and company culture if available. "
-                    f"If specific details are not available, summarize the given information as effectively as possible. "
-                    f"Output the description in the format: (description)."
-                    f"The final output should be in {language} and enclosed in parentheses ()."
-                    f"Erase the @info@ and it's information from the input text"
-                    f"If there is a personal name or role mentioned in the Additional data, say @info@ outside the parentheses."
-                )
-            }
-        ],
-        model="llama3-70b-8192",
-    )
-    response = chat_completion.choices[0].message.content
-    extracted_text = extract_text_within_braces(clean_json_string(response))
-    return extracted_text if extracted_text else response
+    for attempt in range(RETRY_ATTEMPTS):
+        try:
+            chat_completion = client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are an expert in summarizing company information. "
+                            "Your task is to create a comprehensive and coherent company description suitable for a cover letter. "
+                            "The description should be detailed and include, if available, the following elements: "
+                            "company history, mission, key products or services, target market, unique selling points, recent achievements, and company culture. "
+                            "If certain details are missing, focus on summarizing the provided information effectively. "
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"### Current summary:\n"
+                            f"{current_summary}\n\n"
+                            f"### Additionnal data to complete the summary:\n"
+                            f"{content}\n\n"
+                            f"### Task:\n"
+                            f"Using the provided information, generate a detailed and coherent company description. "
+                            f"Include the company's history, mission, key products or services, target market, unique selling points, recent achievements, and company culture if available. "
+                            f"If specific details are not available, summarize the given information as effectively as possible. "
+                            f"Output the description in the format: (description)."
+                            f"The final output should be in {language} and enclosed in parentheses ()."
+                            f"Erase the @info@ and it's information from the input text"
+                            f"If there is a personal name or role mentioned in the Additional data, say @info@ outside the parentheses."
+                        )
+                    }
+                ],
+                model="llama3-70b-8192",
+            )
+            response = chat_completion.choices[0].message.content
+            extracted_text = extract_text_within_braces(clean_json_string(response))
+            return extracted_text if extracted_text else response
+        except Exception as e:
+            print(f"Error generating summary: {e}")
+            time.sleep(RETRY_DELAY)
+    return current_summary
 
 # Fonction pour extraire le nom de l'entreprise à partir du résumé en utilisant le modèle "llama3-70b-8192"
 def extract_company_name(summary):
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": "You are an expert in identifying company names from text."
-            },
-            {
-                "role": "user",
-                "content": f"You must provide only the name of the company, without any preliminary indication, using the following summary: {summary}. "
-            }
-        ],
-        model="llama3-70b-8192",
-    )
-    return chat_completion.choices[0].message.content.strip()
+    for attempt in range(RETRY_ATTEMPTS):
+        try:
+            chat_completion = client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert in identifying company names from text."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"You must provide only the name of the company, without any preliminary indication, using the following summary: {summary}. "
+                    }
+                ],
+                model="llama3-70b-8192",
+            )
+            return chat_completion.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"Error extracting company name: {e}")
+            time.sleep(RETRY_DELAY)
+    return ""
 
 def load_json_file(file_path):
     try:
@@ -520,23 +556,25 @@ def load_json_file(file_path):
             return json.load(file)
     except FileNotFoundError:
         return []
+    except Exception as e:
+        print(f"Error loading JSON file: {e}")
+        return []
 
 def save_json_file(data, file_path):
-    with open(file_path, 'w', encoding='utf-8') as file:
-        json.dump(data, file, ensure_ascii=False, indent=4)
-
+    try:
+        with open(file_path, 'w', encoding='utf-8') as file:
+            json.dump(data, file, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"Error saving JSON file: {e}")
 
 def update_company_data(result, results_file='Json_Files/results.json', company_info_file='Json_Files/company_info.json'):
-    # Charger les résultats existants
     existing_results = load_json_file(results_file)
     company_info_list = load_json_file(company_info_file)
 
-    # Vérifier s'il y a des mails dans le résultat
     if not result.get("mails"):
-        print(f"Aucun email trouvé pour {result.get('company_name')}. Ignoré.")
+        print(f"No emails found for {result.get('company_name')}. Ignored.")
         return
 
-    # Chercher l'entreprise correspondante dans company_info.json
     company_info = None
     for company in company_info_list:
         if company["website"] == result["website"]:
@@ -544,10 +582,9 @@ def update_company_data(result, results_file='Json_Files/results.json', company_
             break
 
     if not company_info:
-        print(f"Aucune information trouvée pour {result.get('company_name')} dans company_info.json. Ignoré.")
+        print(f"No information found for {result.get('company_name')} in company_info.json. Ignored.")
         return
 
-    # Construire le résultat final en utilisant les informations de company_info comme base
     final_result = {
         "company_name": company_info.get("company_name", result.get("company_name", "")),
         "phone": company_info.get("phone", ""),
@@ -558,58 +595,59 @@ def update_company_data(result, results_file='Json_Files/results.json', company_
         "personal_names": company_info.get("personal_names", []) or result.get("personal_names", [])
     }
 
-    # Chercher l'entreprise correspondante dans les résultats existants
     updated = False
     for i, existing_result in enumerate(existing_results):
         if existing_result["website"] == final_result["website"]:
-            # Mettre à jour l'entrée existante avec les informations combinées
             existing_results[i] = final_result
             updated = True
             break
 
     if not updated:
-        # Ajouter la nouvelle entrée si l'entreprise n'est pas trouvée dans les résultats existants
         existing_results.append(final_result)
 
-    # Sauvegarder les résultats mis à jour dans le fichier results.json
     save_json_file(existing_results, results_file)
-    print(f"Informations de l'entreprise mises à jour pour {result.get('company_name')}.")
-    
-# Fonction pour exécuter le processus complet de crawl et de génération de résultats
-def main(company_info_file='Json_Files/company_info.json', results_file='Json_Files/results.json', max_pages=20):
-    # Charger les informations des entreprises depuis company_info.json
-    company_info = load_company_info(company_info_file)
+    print(f"Company information updated for {result.get('company_name')}.")
 
-    #results = []
+def main(company_info_file='Json_Files/company_info.json', results_file='Json_Files/results.json', max_pages=20):
+    company_info = load_company_info(company_info_file)
+    
+    # Charger les résultats existants depuis results.json
+    existing_results = load_json_file(results_file)
+    existing_company_names = {result["company_name"] for result in existing_results}
 
     for company in company_info:
         base_url = company["website"]
+        
+        # Vérifier si le nom de la compagnie est déjà présent dans les résultats existants
+        if company["company_name"] in existing_company_names:
+            print(f"Skipping {company['company_name']} as it already exists in results.")
+            continue
+
         print(f"Crawling website: {base_url}")
         emails, addresses, names, summary_texts = crawl_website(base_url, max_pages)
 
-        max_length = 15000
+        max_length = 10000
         merged_text = " ".join(summary_texts)[:max_length]
 
         current_summary = ""
 
         language = detect_language(merged_text)
 
-        # Diviser le texte en morceaux et itérer pour améliorer la description
-        chunk_size = 2000  # Définir la taille des chunks en nombre de caractères
+        chunk_size = 2000
         for chunk in chunk_text(merged_text, chunk_size):
-            print(f"Texte envoyé à l'IA (partie) :", chunk[:2000])
+            print(f"Text sent to AI (part): {chunk[:chunk_size]}")
             current_summary = generate_summary(chunk, language, current_summary)
-            if check_for_info_tag(current_summary) :
+            if check_for_info_tag(current_summary):
                 process_information(current_summary, addresses, names)
-            print(f"Résumé intermédiaire de l'entreprise :", current_summary)
+            print(f"Intermediate company summary: {current_summary}")
 
         company_name = extract_company_name(current_summary)
 
-        print(f"Adresses e-mail trouvées :", emails)
-        print(f"Adresses trouvées :", addresses)
-        print(f"Noms trouvés :", names)
-        print(f"Nom de l'entreprise :", company_name)
-        print(f"Résumé de l'entreprise :", current_summary)
+        print(f"Emails found: {emails}")
+        print(f"Addresses found: {addresses}")
+        print(f"Names found: {names}")
+        print(f"Company name: {company_name}")
+        print(f"Company summary: {current_summary}")
 
         result = {
             "company_name": company_name,
@@ -617,12 +655,9 @@ def main(company_info_file='Json_Files/company_info.json', results_file='Json_Fi
             "mails": list(emails),
             "addresses": list(addresses),
             "personal_names": list(names),
-            "website": base_url  # Ajouter l'URL de base au résultat
+            "website": base_url
         }
         update_company_data(result)
-        #results.append(result)
-        
 
 if __name__ == "__main__":
     main()
-

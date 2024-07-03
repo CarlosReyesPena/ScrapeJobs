@@ -1,5 +1,11 @@
 [
     {
+        "company_name": "ALCO Stores Sàrl",
+        "phone": "021 732 25 20",
+        "website": "https://www.alcosarl.ch",
+        "addresses": "Chemin du marais 15, 1670 Ursy"
+    },
+    {
         "company_name": "eSMART Technologies SA",
         "phone": "021 552 25 10",
         "website": "http://www.myesmart.com",

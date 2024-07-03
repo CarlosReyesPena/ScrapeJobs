@@ -9,22 +9,20 @@
 ## Response Guidelines
 
 1. Create the body of the cover letter following this structure:
-   - **Greeting**: Address the letter directly to a specific person. This gives a better impression than the general "Dear Madam/Sir".
-   - **Introduction**: The introduction should spark interest, be short and effective, and encourage reading the rest. Explain why you are applying for this position, what caught your attention, why the company interests you, and what sets you apart.
-     - Example: "Looking for a new professional challenge, I came across your company."
-     - Example: "Your company and I have several things in common: a passion for top-quality products, a philosophy of excellence, and a desire to give the best to customers. I would like to join your team and offer my services as an account manager."
-     - Example: "Are you looking for a qualified electrician with several years of experience? My profile fits your expectations exactly."
-   - **Skills and Experience**: In this part, differentiate yourself from other candidates and show that your skills and experience make you the ideal candidate. It is important to link your training and professional experience with the needs of the company and the position. Do not repeat everything you have already said in your CV but emphasize the company's needs and the position. Make a proposal to the recruiter by clearly and precisely explaining which of your skills make you the ideal candidate.
-     - Example: "Thanks to my training as a mason completed in 1998 with honors and my five years of experience with F2X Constructions SA as a foreman, I am ready to take on the role of chief foreman and offer my services."
-     - Example: "Thanks to my activity as a Digital Manager with Martin&Cie and as an e-business coordinator with the Public World agency, you will benefit from my specialized knowledge. Having also participated in project coordination for Martin&Cie and created my own website, I bring sufficient experience in the field of planning and project management."
-   - **Motivation – What Can We Accomplish Together?**: In this section, highlight your personality, motivation, and what you can and want to bring to the company. How will you use your skills and personality to contribute to the company's success?
-     - Example: "I would be happy to use the knowledge acquired during my studies, as well as my flexibility, professionalism, and creativity, in my work with your company."
-     - Example: "With my specialized knowledge, energy, and learning ability, I would like to bring productivity and sustainability to your environmental management team."
-     - Example: "Motivated, flexible, and open, I am very interested in the opportunity to use and strengthen my technical expertise."
-   - **Conclusion**: In conclusion, indicate that you are available for further information and look forward to the potential employer's response.
-     - Example: "I look forward to meeting you and convincing you of my knowledge during an interview."
-     - Example: "I am available for further information or an interview."
-     - Example: "I am convinced that I can perfectly complement your IT team and am available for an interview."
+   - **Greeting**: Address the letter directly to a specific person if possible. This gives a better impression than the general "Dear Madam/Sir".
+   - **Introduction**: The introduction should spark interest, be concise, and encourage reading the rest. Explain why you are applying for this position, what caught your attention, why the company interests you, and what sets you apart. 
+     - Example: "Looking for a new professional challenge, I came across your company and was impressed by its innovative solutions and commitment to excellence."
+     - Example: "Your company's values and dedication to innovation align perfectly with my own professional goals, and I am excited about the opportunity to contribute to your team."
+   - **Skills and Experience**: Highlight your skills and experiences that are most relevant to the position and the company's needs. Instead of copying your CV, focus on how your background makes you an ideal candidate for the role. Tailor your experiences to demonstrate how you can address the company's specific challenges and opportunities.
+     - Example: "With over 10 years of experience in software engineering, I have developed a robust skill set that includes proficiency in multiple programming languages and modern frameworks. At Tech Innovators, I led development teams and increased productivity by 25%, showcasing my ability to drive efficiency and innovation."
+     - Example: "My role as a Digital Manager at Martin&Cie involved not only technical expertise but also project coordination and strategic planning, which I believe would be beneficial to your company's upcoming projects."
+   - **Motivation – What Can We Accomplish Together?**: Emphasize your motivation and what you can bring to the company. Discuss how your unique skills and personality will contribute to the company's success and future growth.
+     - Example: "I am eager to bring my problem-solving abilities and passion for technology to your team, where I can contribute to developing cutting-edge solutions and driving the company's technological advancements."
+     - Example: "My enthusiasm for innovation and continuous improvement aligns with your company's mission, and I am excited about the potential to make a significant impact on your projects."
+   - **Conclusion**: Indicate your availability for further discussion and express your eagerness to hear from the potential employer.
+     - Example: "I look forward to the opportunity to discuss my application in more detail and am available for an interview at your earliest convenience."
+     - Example: "Thank you for considering my application. I am excited about the prospect of contributing to your team and am available for further discussions or an interview."
+
 2. The response must be in {language}.
 3. You must enclose the entire response in curly braces `{}`.
 
@@ -61,8 +59,6 @@ Je me tiens à votre disposition pour un entretien afin de discuter plus en dét
 
 Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées
 }
-
-
 
 ## Compliance Check
 - Ensure the response strictly follows the above guidelines.

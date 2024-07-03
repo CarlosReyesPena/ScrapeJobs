@@ -16,9 +16,9 @@
 5. Enclose the entire response in curly braces `{}`.
 6. Ensure to select the correct company name and personal name from the provided data.
 7. If there is a country in the address, do not include it.
-8. The address must be between 2 and 4 lines.
+8. Your output recipient information must be between 2 and 4 lines.
 
-## Example in French
+## Example
 ### Company Information
 - Company Name: Innovateurs Tech
 - Email Addresses: recrutement@innovateurstech.com, info@innovateurstech.com
