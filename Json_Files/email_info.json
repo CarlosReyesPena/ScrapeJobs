@@ -1,0 +1,29 @@
+{
+    "emails": [
+        {
+            "language": "French",
+            "subject": "Candidature spontanée pour un poste chez",
+            "body": "Madame, Monsieur,\n\nJe me permets de vous adresser ma candidature spontanée pour un poste au sein de votre entreprise. Vous trouverez ci-joint ma lettre de motivation ainsi que mes diplômes.\n\nJe reste à votre disposition pour toute information complémentaire et pour un entretien à votre convenance.\n\nEn vous remerciant par avance de l'attention portée à ma candidature, je vous prie d'agréer, Monsieur, Madame, l'expression de mes salutations distinguées.\n\nCordialement,\n\nCarlos Antonio Reyes Peña"
+        },
+        {
+            "language": "English",
+            "subject": "Open application for a position at",
+            "body": "Dear Sir/Madam,\n\nI am writing to submit my unsolicited application for a position within your company. Attached you will find my cover letter and my diplomas.\n\nI remain at your disposal for any further information and for an interview at your convenience.\n\nThank you in advance for your attention to my application. Please accept, Sir/Madam, the expression of my distinguished greetings.\n\nSincerely,\n\nCarlos Antonio Reyes Peña"
+        },
+        {
+            "language": "Spanish",
+            "subject": "Solicitud espontánea para un puesto en",
+            "body": "Estimado/a Señor/a,\n\nMe permito enviarle mi solicitud espontánea para un puesto en su empresa. Adjunto encontrará mi carta de motivación y mis diplomas.\n\nQuedo a su disposición para cualquier información adicional y para una entrevista a su conveniencia.\n\nAgradeciéndole de antemano por la atención prestada a mi solicitud, le ruego acepte, Señor/a, la expresión de mis saludos distinguidos.\n\nAtentamente,\n\nCarlos Antonio Reyes Peña"
+        },
+        {
+            "language": "German",
+            "subject": "Initiativbewerbung für eine Stelle bei",
+            "body": "Sehr geehrte Damen und Herren,\n\nIch erlaube mir, Ihnen meine Initiativbewerbung für eine Stelle in Ihrem Unternehmen zuzusenden. Anbei finden Sie mein Bewerbungsschreiben sowie meine Diplome.\n\nFür weitere Informationen und für ein Gespräch stehe ich Ihnen gerne zur Verfügung.\n\nIch danke Ihnen im Voraus für die Aufmerksamkeit, die Sie meiner Bewerbung entgegenbringen, und verbleibe mit freundlichen Grüßen.\n\nMit freundlichen Grüßen,\n\nCarlos Antonio Reyes Peña"
+        },
+        {
+            "language": "Italian",
+            "subject": "Candidatura spontanea per una posizione presso",
+            "body": "Gentile Signore/a,\n\nMi permetto di inviarle la mia candidatura spontanea per una posizione all'interno della sua azienda. In allegato troverà la mia lettera di motivazione e i miei diplomi.\n\nResto a sua disposizione per qualsiasi ulteriore informazione e per un colloquio a sua convenienza.\n\nRingraziandola anticipatamente per l'attenzione prestata alla mia candidatura, le porgo cordiali saluti.\n\nCordiali saluti,\n\nCarlos Antonio Reyes Peña"
+        }
+    ]
+}

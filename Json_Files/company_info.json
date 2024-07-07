@@ -1,11 +1,5 @@
 [
     {
-        "company_name": "ALCO Stores Sàrl",
-        "phone": "021 732 25 20",
-        "website": "https://www.alcosarl.ch",
-        "addresses": "Chemin du marais 15, 1670 Ursy"
-    },
-    {
         "company_name": "eSMART Technologies SA",
         "phone": "021 552 25 10",
         "website": "http://www.myesmart.com",
@@ -18,28 +12,16 @@
         "addresses": "Chemin des Plans-Praz 28, 1337 Vallorbe"
     },
     {
-        "company_name": "JDC Electronic SA",
-        "phone": "+41 24 445 21 21",
-        "website": "http://www.jdc.ch",
-        "addresses": "Avenue des Sports 42, 1401 Yverdon"
-    },
-    {
-        "company_name": "Phone Solutions Sàrl",
-        "phone": "021 625 04 04",
-        "website": "https://phonesolutions.ch",
-        "addresses": "Avenue de Morges 90, 1008 Lausanne"
-    },
-    {
-        "company_name": "PSI AUDIO / Relec SA",
+        "company_name": "PSI AUDIO",
         "phone": "+41 24 426 04 20",
         "website": "http://www.psiaudio.swiss",
         "addresses": "Rue des Petits Champs 11a, 1400 Yverdon-les-Bains"
     },
     {
-        "company_name": "S+T Service & Technique S.A.",
+        "company_name": "Service & Technique S.A.",
         "phone": "+41 22 899 18 18",
         "website": "http://www.st-sa.ch",
-        "addresses": "67 rte du Pas-de-l´Echelle, Veyrier"
+        "addresses": "Rte du Pas-de-l'Echelle 67, 1255 Veyrier"
     },{
         "company_name": "Sedelec SA Lausanne",
         "phone": "021 651 20 00",
@@ -135,12 +117,6 @@
         "phone": "+41 21 691 00 73",
         "website": "https://daphnetechnology.com/career",
         "addresses": "Chemin de la Venoge 7, 1025 Saint-Sulpice"
-    },
-    {
-        "company_name": "Dave Elec",
-        "phone": "+41788251326",
-        "website": "http://Dave-elec.ch",
-        "addresses": "Rue Dr Cesar-Roux 8, 1005 Lausanne"
     },
     {
         "company_name": "Digital Audio SA",
@@ -261,12 +237,6 @@
         "phone": "+41798696610",
         "website": "http://www.logiq-concept.ch",
         "addresses": "Rue Galilée 6, 1400 Yverdon-les-Bains"
-    },
-    {
-        "company_name": "Logitech",
-        "phone": "021 863 51 46",
-        "website": "https://www.logitech.com/",
-        "addresses": "EPFL Parc de l'innovation Bâtiment K, lausanne"
     },
     {
         "company_name": "MANUFACTURE MODULES TECHNOLOGIES",

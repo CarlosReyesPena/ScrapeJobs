@@ -3,12 +3,12 @@
 ## Response Guidelines
 
 1. The structure of the recipient information should include the following elements:
-    - **Company Name:** Use the value from {"company_name"}.
+    - **Company Name:** Use the value from :"{"company_name"}".
     - **Full Name:** Choose the most appropriate name for handling applications based on the following priority:
-        1. If "HR" or "Human Resources" is in the title from {"personal_names"}, use that name (without the role).
+        1. If "HR" or "Human Resources" is in the title from : "{"personal_names"}", use that name (without the role).
         2. If the above is not available, use any name with "Head" or "Chief" in the title (without the role).
         3. If no appropriate name is found, use the equivalent to "To whom it may concern" in {language}.
-    - **Company Address:** If there are any addresses in {"addresses"}, include them. Ensure each part of the address is on a separate line.
+    - **Company Address:** If there are any addresses in "{"addresses"}", include them. Ensure each part of the address is on a separate line.
 
 2. Remove any role or title before using the name.
 3. Create the recipient information using the elements provided.

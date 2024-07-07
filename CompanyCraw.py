@@ -1,7 +1,6 @@
 import os
 import re
-import requests
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 from pathlib import Path
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
@@ -10,9 +9,12 @@ from groq import Groq
 from langdetect import detect, LangDetectException
 import base64
 import time
+import asyncio
+import aiohttp
+from email_validator import validate_email, EmailNotValidError
 
-RETRY_ATTEMPTS = 20
-RETRY_DELAY = 5
+RETRY_ATTEMPTS = 5
+RETRY_DELAY = 3
 
 # Charger l'API key depuis un fichier
 def load_api_key(file_path='groq_api_key.txt'):
@@ -65,86 +67,15 @@ def create_persistent_profile():
     os.makedirs(extensions_dir, exist_ok=True)
 
     extension_paths = get_extension_paths(extensions_dir)
-    extensions_args = []
-    for path in extension_paths:
-        extensions_args.append(f'--disable-extensions-except={path}')
-        extensions_args.append(f'--load-extension={path}')
+    # Construire les arguments pour charger toutes les extensions
+    extensions_arg = ",".join(extension_paths)
 
-    return user_data_dir, extensions_args
+    args = [
+        f'--disable-extensions-except={extensions_arg}',
+        f'--load-extension={extensions_arg}'
+    ]
 
-# Fonction pour capturer les mailto links avec Playwright avec une limite d'essais
-def capture_mailto_links(url):
-    mailto_requests_urls = []
-    click_attempts = 0  # Initialiser le compteur d'essais de clics
-    max_clicks = 10  # Limite des clics
-
-    user_data_dir, extensions_args = create_persistent_profile()
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch_persistent_context(user_data_dir, headless=False, args=extensions_args)  # Utiliser un profil utilisateur persistant
-        page = browser.new_page()
-
-        # Fonction pour capturer les requêtes réseau
-        def capture_request(request):
-            if 'mailto:' in request.url:
-                mailto_requests_urls.append(request.url)
-
-        # Écouter les événements de requêtes réseau
-        page.on('request', capture_request)
-
-        for attempt in range(RETRY_ATTEMPTS):
-            try:
-                # Naviguer vers l'URL
-                page.goto(url, timeout=30000)
-                page.wait_for_load_state('networkidle')
-                break  # Sortir de la boucle si la navigation réussit
-            except Exception as e:
-                print(f"Error navigating to {url}: {e}")
-                if attempt < RETRY_ATTEMPTS - 1:
-                    print(f"Retrying in {RETRY_DELAY} seconds...")
-                    time.sleep(RETRY_DELAY)
-                else:
-                    print(f"Failed to navigate to {url} after {RETRY_ATTEMPTS} attempts.")
-                    browser.close()
-                    return mailto_requests_urls
-
-        # Défilement lent pour s'assurer que tous les éléments sont chargés
-        scroll_height = page.evaluate('document.body.scrollHeight')
-        for scroll in range(0, scroll_height, 300):
-            page.evaluate(f'window.scrollTo(0, {scroll})')
-            time.sleep(1)
-
-        # Obtenir le contenu HTML de la page
-        html_content = page.content()
-        soup = BeautifulSoup(html_content, 'html.parser')
-
-        # Identifier et cliquer sur les éléments contenant "mail" n'importe où dans les attributs ou le texte
-        mail_elements = soup.find_all('a')
-        for element in mail_elements:
-            if click_attempts >= max_clicks:
-                print("Nombre maximum d'essais de clics atteint.")
-                break
-            try:
-                element_str = str(element)
-                if "mail" in element_str.lower():
-                    href = element.get('href')
-                    # Rechercher l'élément avec Playwright et cliquer dessus via JavaScript
-                    playwright_element = page.query_selector(f'a[href="{href}"]')
-                    if playwright_element:
-                        page.evaluate('element => { element.scrollIntoView(); element.click(); }', playwright_element)
-                        page.wait_for_load_state('networkidle')
-                        click_attempts += 1  # Incrémenter le compteur d'essais de clics
-            except Exception as e:
-                print(f"Error clicking element: {e}")
-                click_attempts += 1  # Incrémenter le compteur d'essais de clics en cas d'erreur
-
-        # Fermer le navigateur
-        browser.close()
-
-    return mailto_requests_urls
-
-
-
+    return user_data_dir, args
 # Fonction pour extraire les e-mails des URLs "mailto:"
 def extract_emails_from_mailto_links(mailto_links):
     emails = []
@@ -167,115 +98,281 @@ def log_extraction(function_name, input_text, result):
         file.write("Result:\n")
         file.write(str(result) + "\n")
 
-# Fonction pour extraire les e-mails d'une page HTML et utiliser Playwright si nécessaire
-def extract_emails_with_context(html_content, base_url, visited_mailto_links):
-    soup = BeautifulSoup(html_content, 'html.parser')
-    visible_text = soup.get_text(separator='\n', strip=True)
-    
-    email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-    emails = set()
-    mail_elements = soup.find_all('a', href=True)
-    for element in mail_elements:
-        href = element['href'].lower()
-        element_text = element.get_text(separator=' ', strip=True).lower()
-        if "mail" in href or "mail" in element_text:
-            if href not in visited_mailto_links:
-                element_context = element.get_text(separator=' ', strip=True)
-                start = max(visible_text.find(element_context) - 500, 0)
-                end = min(visible_text.find(element_context) + len(element_context) + 500, len(visible_text))
-                context = visible_text[start:end]
+# Fonction pour capturer les mailto links avec Playwright avec une limite d'essais
+async def capture_mailto_links(url):
+    mailto_requests_urls = []
+    click_attempts = 0  # Initialiser le compteur d'essais de clics
+    max_clicks = 10  # Limite des clics
 
-                mailto_requests_urls = capture_mailto_links(base_url)
-                mailto_emails = extract_emails_from_mailto_links(mailto_requests_urls)
-                for email in mailto_emails:
-                    emails.add((email, context))
-                    log_extraction('mailto_link', base_url, (email, context))
-                
-                visited_mailto_links.add(href)
-        
-        link_text = element.get_text(separator=' ', strip=True)
-        emails.update(extract_emails(link_text, html_content, 'default', email_pattern))
+    user_data_dir, extensions_args = create_persistent_profile()
 
-    emails.update(extract_emails(visible_text, html_content, 'default', email_pattern))
+    async with async_playwright() as p:
+        browser = await p.chromium.launch_persistent_context(user_data_dir, headless=True, args=extensions_args)  # Utiliser un profil utilisateur persistant
+        page = await browser.new_page()
 
-    emails.update(extract_emails(visible_text, html_content, 'obfuscated', email_pattern))
-    emails.update(extract_emails(visible_text, html_content, 'encoded', email_pattern))
-    emails.update(extract_emails(visible_text, html_content, 'base64', email_pattern))
-    emails.update(extract_emails(visible_text, html_content, 'spaced', email_pattern))
+        # Fonction pour capturer les requêtes réseau
+        async def capture_request(request):
+            if 'mailto:' in request.url:
+                mailto_requests_urls.append(request.url)
 
-    return list(emails)
+        # Écouter les événements de requêtes réseau
+        page.on('request', capture_request)
 
-def extract_emails(text, context, method='default', email_pattern=r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'):
-    emails = set()
+        for attempt in range(RETRY_ATTEMPTS):
+            try:
+                # Naviguer vers l'URL
+                await page.goto(url, timeout=30000)
+                await page.wait_for_load_state('networkidle')
+                break  # Sortir de la boucle si la navigation réussit
+            except Exception as e:
+                print(f"Error navigating to {url}: {e}")
+                if attempt < RETRY_ATTEMPTS - 1:
+                    print(f"Retrying in {RETRY_DELAY} seconds...")
+                    await asyncio.sleep(RETRY_DELAY)
+                else:
+                    print(f"Failed to navigate to {url} after {RETRY_ATTEMPTS} attempts.")
+                    await browser.close()
+                    return mailto_requests_urls
 
-    try:
-        if method == 'default':
-            matches = re.finditer(email_pattern, text)
-        elif method == 'obfuscated':
-            obfuscated_pattern = r'\b\w+[.\w+]*\s*\[at\]\s*\w+[.\w+]*\s*\[dot\]\s*\w+\b'
-            matches = [
-                re.match(email_pattern, match.group().replace('[at]', '@').replace('[dot]', '.').replace(' ', ''))
-                for match in re.finditer(obfuscated_pattern, text)
-                if re.match(email_pattern, match.group().replace('[at]', '@').replace('[dot]', '.').replace(' ', ''))
-            ]
-        elif method == 'encoded':
-            encoded_emails = re.findall(r'&#\d+;', text)
-            decoded_email = ''.join([chr(int(code[2:-1])) for code in encoded_emails])
-            matches = [re.match(email_pattern, decoded_email)]
-        elif method == 'base64':
-            base64_pattern = r'[A-Za-z0-9+/=]{40,}'
-            matches = []
-            for match in re.finditer(base64_pattern, text):
-                try:
-                    decoded_email = base64.b64decode(match.group()).decode('utf-8')
-                    if re.match(email_pattern, decoded_email):
-                        matches.append(re.match(email_pattern, decoded_email))
-                except (base64.binascii.Error, UnicodeDecodeError) as e:
-                    print(f"Base64 decoding error: {e}")
-        elif method == 'spaced':
-            #print(text)
-            spaced_pattern = r'\b\w+\s*\w*\s*\[?\s*@\s*\]?\s*\w+\s*\.\s*\w+\b'
-            matches = [
-                re.match(email_pattern, match.group().replace(' ', '').replace('[at]', '@').replace('[dot]', '.'))
-                for match in re.finditer(spaced_pattern, text)
-                if re.match(email_pattern, match.group().replace(' ', '').replace('[at]', '@').replace('[dot]', '.'))
-            ]
+        # Identifier les éléments contenant le mot "mail" dans le texte visible, dans les attributs ou dans le contenu de l'élément
+        mail_elements = await page.query_selector_all('a, button')
+        matching_elements = []
 
-        for match in matches:
-            if match:
-                email = match.group()
-                start = max(match.start() - 500, 0)
-                end = min(match.end() + 500, len(text))
-                email_context = text[start:end]
-                emails.add((email, email_context))
-                log_extraction('html_content', context, (email, email_context))
-                log_extraction('extract_emails_with_context', text, (email, email_context))
-    except Exception as e:
-        print(f"An error occurred during email extraction: {e}")
+        for element in mail_elements:
+            element_html = await element.evaluate('(element) => element.outerHTML.toLowerCase()')
+            element_text = await element.evaluate('(element) => element.innerText.toLowerCase()')
+            if "mail" in element_html or "mail" in element_text:
+                matching_elements.append(element)
+
+
+        for element in matching_elements:
+            if click_attempts >= max_clicks:
+                print("Nombre maximum d'essais de clics atteint.")
+                break
+            try:
+                # Obtenir la bounding box de l'élément
+                bounding_box = await element.bounding_box()
+                if bounding_box:
+                   
+                    # Utiliser des assertions pour vérifier que l'élément est visible et cliquable
+                    await element.scroll_into_view_if_needed()
+                    # Cliquer sur la position centrale de l'élément
+                    bounding_box = await element.bounding_box()
+                    x = bounding_box['x'] + bounding_box['width'] / 2
+                    y = bounding_box['y'] + bounding_box['height'] / 2
+                    await page.mouse.click(x, y)
+                click_attempts += 1  # Incrémenter le compteur d'essais de clics
+            except Exception as e:
+                print(f"Error clicking element: {e}")
+                click_attempts += 1  # Incrémenter le compteur d'essais de clics en cas d'erreur
+        # Fermer le navigateur
+        await browser.close()
+
+        emails = extract_emails_from_mailto_links(list(mailto_requests_urls))
 
     return emails
 
-# Fonction pour récupérer le contenu d'une page web
-def fetch_page(url):
+async def filter_and_rank_emails(emails, url):
+    if not emails:
+        return emails  # Retourner immédiatement si la liste des e-mails est vide
+
+    valid_emails = []
+    for email in emails:
+        try:
+            # Valider et normaliser l'email
+            email_info = validate_email(email, check_deliverability=True)
+            normalized_email = email_info.normalized
+            valid_emails.append(normalized_email)
+        except EmailNotValidError as e:
+            print(f"Invalid email '{email}': {str(e)}")
+
+    if not valid_emails:
+        return valid_emails  # Retourner immédiatement si aucune adresse email valide n'est trouvée
+
+    # Extraction du domaine principal du site web
+    parsed_url = urlparse(url)
+    base_domain = parsed_url.netloc
+    base_domain_name = base_domain.split('.')[-2]  # Nom de domaine sans TLD
+
+    # Liste des mots-clés spécifiques
+    keywords = [
+        'job', 'work', 'career', 'recruitment', 'hr', 'human resources', 'employment', 'vacancy', 'position', 'opening',
+        'arbeit', 'karriere', 'rekrutierung', 'personal', 'menschliche ressourcen', 'beschäftigung', 'stelle', 'position', 'öffnung',
+        'lavoro', 'carriera', 'reclutamento', 'risorse umane', 'occupazione', 'vacanza', 'posizione', 'apertura',
+        'emploi', 'travail', 'carrière', 'recrutement', 'rh', 'ressources humaines', 'poste', 'position', 'ouverture',
+        'trabajo', 'carrera', 'reclutamiento', 'recursos humanos', 'empleo', 'vacante', 'posición', 'apertura'
+    ]
+
+    # Calculer la longueur moyenne des emails
+    avg_length = sum(len(email) for email in valid_emails) / len(valid_emails)
+
+    # Compter les occurrences de chaque domaine complet après le @
+    domain_counts = {}
+    for email in valid_emails:
+        full_domain = email.split('@')[-1]
+        if full_domain not in domain_counts:
+            domain_counts[full_domain] = 0
+        domain_counts[full_domain] += 1
+
+    # Définir une fonction pour calculer les points pour chaque email
+    def calculate_points(email):
+        points = 0
+        domain_full = email.split('@')[-1]
+        domain_base = domain_full.split('.')[0]
+        # Ajouter des points si le domaine complet a plusieurs occurrences
+        if domain_counts[domain_full] > 1:
+            points += 1
+        # Ajouter des points si le domaine du site web est inclus dans l'email (comparaison entre @ et .)
+        if base_domain_name in domain_base:
+            points += 1
+        # Pénaliser les emails qui sont de 10 caractères plus longs que la longueur moyenne
+        if len(email) > avg_length + 10:
+            points -= 1
+        return points
+
+    # Calculer les points pour chaque email
+    email_points = [(email, calculate_points(email)) for email in valid_emails]
+
+    # Vérifier si email_points est vide
+    if not email_points:
+        return valid_emails
+
+    # Trouver le score maximum
+    max_points = max(email_points, key=lambda x: x[1])[1]
+
+    # Filtrer les emails pour ne conserver que ceux avec le score maximum
+    filtered_emails = [email for email, points in email_points if points == max_points]
+
+    # Trier les emails par des mots-clés spécifiques pour les placer en premier
+    filtered_emails.sort(key=lambda email: any(keyword in email for keyword in keywords), reverse=True)
+
+    return filtered_emails
+
+
+
+async def extract_emails_with_context(html_content, url,currents_emails, visited_mailto_links):
+    emails_with_context = set()
+    soup = BeautifulSoup(html_content, 'html.parser')
+    visible_text = soup.get_text(separator='\n', strip=True)
+    clickable_elements = soup.find_all(['a', 'button'])
+
+    emails_with_context.update(extract_emails(visible_text,currents_emails))
+
+    if clickable_elements:
+        element_str = str(clickable_elements).lower()
+        if "mailto" in element_str:
+            if url not in visited_mailto_links:
+                mailto_emails = await capture_mailto_links(url)
+                for mailto_email in mailto_emails:
+                    if mailto_email not in emails_with_context and mailto_email not in currents_emails:
+                        emails_with_context.add((mailto_email, None))
+                visited_mailto_links.add(url)
+    return emails_with_context
+
+def is_base64(s):
+    try:
+        return base64.b64encode(base64.b64decode(s)).decode('utf-8') == s
+    except Exception:
+        return False
+    
+# Listes des variantes pour @ et .
+at_variants = ['[at]', '(at)', '{at}', '[AT]', '(AT)', '{AT}', ' at ']
+dot_variants = ['[dot]', '(dot)', '{dot}', '[DOT]', '(DOT)', '{DOT}', ' dot ']
+
+def clean_text_for_emails(text):
+     # Replace obfuscated [at] and [dot]
+    # Remplacer les variantes de @ par @
+    for variant in at_variants:
+        text = text.replace(variant, '@')
+    
+    # Remplacer les variantes de . par .
+    for variant in dot_variants:
+        text = text.replace(variant, '.')
+    
+    text = text.replace(' ', '')
+
+    # Decode base64 encoded strings
+    words = text.split()
+    for i, word in enumerate(words):
+        if is_base64(word):
+            try:
+                decoded_email = base64.b64decode(word).decode('utf-8')
+                words[i] = decoded_email
+            except (base64.binascii.Error, UnicodeDecodeError):
+                continue
+    text = ' '.join(words)
+
+    return ''.join(text)
+
+def extract_emails(text,currents_emails):
+    email_pattern=r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+    emails = set()
+    cleaned_text = clean_text_for_emails(text)
+    matches = re.finditer(email_pattern, cleaned_text)
+
+    for match in matches:
+        if match.group() not in emails and match.group() not in currents_emails:
+            email = match.group()
+            start = max(match.start() - 500, 0)
+            end = min(match.end() + 500, len(cleaned_text))
+            email_context = cleaned_text[start:end]
+            emails.add((email, email_context))
+
+    return emails
+
+async def fetch_page_with_aiohttp(url):
     headers = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/78.0.3904.70 Chrome/78.0.3904.70 Safari/537.36'
     }
-    for attempt in range(RETRY_ATTEMPTS):
-        try:
-            response = requests.get(url, headers=headers)
-            if response.status_code == 200:
-                return response.text
-            else:
-                print(f"HTTP error {response.status_code} while fetching {url}")
-        except requests.RequestException as e:
-            print(f"Error fetching {url}: {e}")
+    async with aiohttp.ClientSession() as session:
+        for attempt in range(RETRY_ATTEMPTS):
+            try:
+                async with session.get(url, headers=headers) as response:
+                    if response.status == 200:
+                        return await response.text()
+                    else:
+                        print(f"HTTP error {response.status} while fetching {url}")
+            except aiohttp.ClientError as e:
+                print(f"Error fetching {url}: {e}")
             if attempt < RETRY_ATTEMPTS - 1:
                 print(f"Retrying in {RETRY_DELAY} seconds...")
-                time.sleep(RETRY_DELAY)
+                await asyncio.sleep(RETRY_DELAY)
             else:
                 print(f"Failed to fetch {url} after {RETRY_ATTEMPTS} attempts.")
-    return ""
+    return None
 
+async def fetch_page_with_playwright(url):
+    user_data_dir, extensions_args = create_persistent_profile()
+
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch_persistent_context(user_data_dir, headless=True, args=extensions_args)
+            page = await browser.new_page()
+            await page.goto(url, timeout=30000)
+            await page.wait_for_load_state('networkidle')
+            content = await page.content()
+            await browser.close()
+            return content
+    except Exception as e:
+        print(f"Error fetching {url} with Playwright: {e}")
+        return None
+
+async def fetch_page_with_fallback(url, use_playwright=False):
+    if use_playwright:
+        return await fetch_page_with_playwright(url)
+    try:
+        content = await fetch_page_with_aiohttp(url)
+        if content:
+            return content
+        print(f"Failed to fetch {url} with aiohttp, falling back to Playwright...")
+        content = await fetch_page_with_playwright(url)
+        if content:
+            print(f"Fetched {url} with Playwright successfully.")
+            use_playwright = True
+            return content
+    except Exception as e:
+        print(f"Error in fetch_page_with_fallback: {e}")
+    return None
 
 # Fonction pour normaliser les textes en minuscules et remplacer les caractères non alphabétiques par des espaces
 def normalize_text(text):
@@ -288,7 +385,7 @@ def contains_keyword(url, text, keywords):
     return any(normalize_text(keyword) in normalized_url or normalize_text(keyword) in normalized_text for keyword in keywords)
 
 # Fonction pour analyser une page et trouver des liens internes classés par catégories
-def get_internal_links(base_url, html_content, list_1, list_2):
+async def get_internal_links(base_url, html_content, list_1, list_2, initial_attempt=True):
     parsed_base_url = urlparse(base_url)
     base_domain = parsed_base_url.netloc
     soup = BeautifulSoup(html_content, 'html.parser')
@@ -310,6 +407,10 @@ def get_internal_links(base_url, html_content, list_1, list_2):
                 elif contains_keyword(full_url, link_text, list_2) or full_url in list_2:
                     cat2_links.add(full_url)
 
+    # Si aucun lien trouvé lors de la tentative initiale, utiliser Playwright pour récupérer le contenu
+    if initial_attempt and not cat1_links and not cat2_links:
+        return cat1_links, cat2_links
+
     # Charger les liens existants à partir du fichier classified_links.json
     try:
         with open('classified_links.json', 'r', encoding='utf-8') as file:
@@ -326,6 +427,7 @@ def get_internal_links(base_url, html_content, list_1, list_2):
         json.dump(existing_links, file, ensure_ascii=False, indent=4)
 
     return cat1_links, cat2_links
+
 
 # Fonction pour vérifier si une URL ne contient pas d'extension non-web
 def has_extension(url):
@@ -351,8 +453,8 @@ def extract_text_within_braces(text):
         print(f"Error extracting text within braces: {e}")
         return ""
 
-def extract_address(context):
-    result = extract_information(context)
+def extract_address(context, company_name):
+    result = extract_information(context, company_name)
     try:
         clean_result = clean_json_string(result)
         json_str = extract_text_within_braces(clean_result)
@@ -361,7 +463,7 @@ def extract_address(context):
         print(f"Error extracting or decoding JSON: {e}")
         try:
             corrected_result = extract_information(
-                context + " The previous output was not in the correct JSON format. Please ensure the JSON is properly formatted."
+                context + " The previous output was not in the correct JSON format. Please ensure the JSON is properly formatted.", company_name
             )
             clean_result = clean_json_string(corrected_result)
             json_str = extract_text_within_braces(clean_result)
@@ -376,53 +478,61 @@ def chunk_text(text, chunk_size):
         yield ' '.join(words[i:i + chunk_size])
 
 # Fonction principale pour parcourir le site et extraire les e-mails et adresses
-def crawl_website(base_url, max_pages):
+async def crawl_website(base_url, max_pages):
     visited_urls = set()
     emails = []
     addresses = []
     names = []
     processed_emails = {}
     summary_texts = []
-    visited_links_order = []
     visited_mailto_ref = set()
+    use_playwright = False
 
     list_1, list_2 = load_lists("Json_Files/lists.json")
 
-    to_visit = [[] for _ in range(2)]
-
-    html_content = fetch_page(base_url)
+    html_content = await fetch_page_with_fallback(base_url, use_playwright)
     
+    to_visit = [[] for _ in range(2)]
     to_visit[0].append(base_url)
     if html_content:
-        cat1_links, cat2_links = get_internal_links(base_url, html_content, list_1, list_2)
+        cat1_links, cat2_links = await get_internal_links(base_url, html_content, list_1, list_2, initial_attempt=True)
+        if not cat1_links and not cat2_links:
+            print("No internal links found on the main page. Using Playwright to fetch more links.")
+            html_content = await fetch_page_with_playwright(base_url)
+            cat1_links, cat2_links = await get_internal_links(base_url, html_content, list_1, list_2, initial_attempt=False)
+            if cat1_links or cat2_links:
+                print("Internal links found using Playwright.")
+                use_playwright = True
         to_visit[0].extend(list(cat1_links))
         to_visit[1].extend(list(cat2_links))
 
     current_category = 0
 
+    count = 0
     while any(to_visit) and len(visited_urls) < max_pages:
-        while to_visit[current_category] and len(visited_urls) < max_pages:
+        while current_category < len(to_visit) and to_visit[current_category] and len(visited_urls) < max_pages:
+            count += 1
             current_url = to_visit[current_category].pop(0)
 
             if current_url in visited_urls:
                 continue
 
             visited_urls.add(current_url)
-            visited_links_order.append(current_url)
             
-            html_content = fetch_page(current_url)
+            html_content = await fetch_page_with_fallback(current_url, use_playwright)
             if html_content:
-                print(f"Visiting: {current_url}")
-                
+                print(f"Visiting: {current_url}")          
                 soup = BeautifulSoup(html_content, 'html.parser')
                 visible_text = soup.get_text(separator=' ', strip=True)
                 
                 if current_category == 0 or current_url in cat1_links:
-                    emails_with_context = extract_emails_with_context(html_content, current_url, visited_mailto_ref)
+                    emails_with_context = await extract_emails_with_context(html_content, current_url,emails , visited_mailto_ref)
                     for email, context in emails_with_context:
                         print(f"Email found: {email}")
-                        if email not in processed_emails:
-                            information = process_information(context, addresses, names)
+                        if email not in processed_emails and context:
+                            #extract the name of the site web in the base_url : exemple : www.google.com => google
+                            company_name = base_url.split('.')[1]
+                            information = process_information(context, addresses, names, company_name)
                             processed_emails[email] = information
                         if email not in emails:
                             emails.append(email)
@@ -430,22 +540,30 @@ def crawl_website(base_url, max_pages):
                 if current_category == 0 or current_url in cat2_links:
                     summary_texts.append(visible_text)
                 
-                cat1_links, cat2_links = get_internal_links(current_url, html_content, list_1, list_2)
+                cat1_links, cat2_links = await get_internal_links(current_url, html_content, list_1, list_2, initial_attempt=True)
                 to_visit[0].extend(list(cat1_links - visited_urls))
                 to_visit[1].extend(list(cat2_links - visited_urls))
-        
-        current_category += 1
-        if current_category >= len(to_visit):
-            break
-    
-    with open('visited_links.txt', 'w', encoding='utf-8') as file:
-        for link in visited_links_order:
-            file.write(link + '\n')
+            
+            current_category += 1
+            if current_category >= len(to_visit):
+                break
+
+        # Reset current_category to start again
+        if to_visit[0]:
+            current_category = 0
+        else:
+            current_category = 1
+
+    emails = await filter_and_rank_emails(emails, base_url)
+
+    print(f"final emails found: {emails}")
 
     return emails, addresses, names, summary_texts
 
-def process_information(context, addresses, names):
-    information = extract_address(context)
+
+
+def process_information(context, addresses, names, company_name):
+    information = extract_address(context, company_name)
 
     unique_addresses = set(addresses)
     unique_names = set(names)
@@ -474,8 +592,21 @@ def detect_language(text):
 
 def check_for_info_tag(summary_response):
     return "@info@" in summary_response
+
+# Fonction pour extraire le temps d'attente depuis le message d'erreur
+def extract_wait_time(error_message):
+    match = re.search(r'Please try again in (\d+\.?\d*)s', error_message)
+    if match:
+        return float(match.group(1))
+    match = re.search(r'Please try again in (\d+\.?\d*)m', error_message)
+    if match:
+        return float(match.group(1)) * 60
+    match = re.search(r'Please try again in (\d+\.?\d*)h', error_message)
+    if match:
+        return float(match.group(1)) * 3600
+    return None
     
-def extract_information(context):
+def extract_information(context, company_name):
     for attempt in range(RETRY_ATTEMPTS):
         try:
             chat_completion = client.chat.completions.create(
@@ -484,18 +615,19 @@ def extract_information(context):
                         "role": "system",
                         "content": (
                             "You are an expert in extracting specific information from text and providing structured outputs in JSON format. "
-                            "Your task is to identify and extract physical addresses and the names of key figures along with their roles from the provided text. "
+                            f"Your task is to identify and extract physical addresses and the names of key figures of the company {company_name}, along with their roles from the provided text."
                             "Ensure the output is accurate and formatted correctly, avoiding redundancy."
+                            f"Do not include any names or addresses that are not related to the company {company_name}."
                         )
                     },
                     {
                         "role": "user",
                         "content": (
                             f"From the following text: {context}, extract the physical addresses and person names with their roles. "
-                            f"Do not include any post office boxes. Provide the results in the following JSON format: "
-                            f"{{\"addresses\": [\"address1\", \"address2\", ...], \"names_and_roles\": [\"Person Name, Person Role\", ...]}}. "
-                            f"Do not include addresses that are not related to the company. Exclude any person that is not a key figure in the company. "
-                            f"Ensure each name is correctly paired with their role and formatted as \"Person Name, Person Role\" without any extra structure or redundancy."
+                            "Do not include any post office boxes. Provide the results in the following JSON format: "
+                            "{\"addresses\": [\"address1\", \"address2\", ...], \"names_and_roles\": [\"Person Name, Person Role\", ...]}."
+                            "Do not include addresses that are not related to the company. Exclude any person that is not a key figure in the company. "
+                            "Ensure each name is correctly paired with their role and formatted as \"Person Name, Person Role\" without any extra structure or redundancy."
                         )
                     }
                 ],
@@ -503,9 +635,15 @@ def extract_information(context):
             )
             return chat_completion.choices[0].message.content.strip()
         except Exception as e:
-            print(f"Error extracting information: {e}")
-            time.sleep(RETRY_DELAY)
+            print(f"Error: {e}")
+            wait_time = extract_wait_time(str(e))
+            if wait_time:
+                print(f"Rate limit exceeded. Waiting for {wait_time} seconds before retrying...")
+                time.sleep(wait_time)
+            else:
+                time.sleep(RETRY_DELAY)
     return ""
+
 
 def generate_summary(content, language, current_summary=""):
     for attempt in range(RETRY_ATTEMPTS):
@@ -535,8 +673,7 @@ def generate_summary(content, language, current_summary=""):
                             f"If specific details are not available, summarize the given information as effectively as possible. "
                             f"Output the description in the format: (description)."
                             f"The final output should be in {language} and enclosed in parentheses ()."
-                            f"Erase the @info@ and it's information from the input text"
-                            f"If there is a personal name or role mentioned in the Additional data, say @info@ outside the parentheses."
+                            f"If there is a personal name in the Additional data, write @info@ at the right of the description. Outside the parentheses."
                         )
                     }
                 ],
@@ -546,11 +683,16 @@ def generate_summary(content, language, current_summary=""):
             extracted_text = extract_text_within_braces(clean_json_string(response))
             return extracted_text if extracted_text else response
         except Exception as e:
-            print(f"Error generating summary: {e}")
-            time.sleep(RETRY_DELAY)
+            print(f"Error: {e}")
+            wait_time = extract_wait_time(str(e))
+            if wait_time:
+                print(f"Rate limit exceeded. Waiting for {wait_time} seconds before retrying...")
+                time.sleep(wait_time)
+            else:
+                time.sleep(RETRY_DELAY)
     return current_summary
 
-# Fonction pour extraire le nom de l'entreprise à partir du résumé en utilisant le modèle "llama3-70b-8192"
+# Fonction pour extraire le nom de l'entreprise à partir du résumé.
 def extract_company_name(summary):
     for attempt in range(RETRY_ATTEMPTS):
         try:
@@ -569,8 +711,13 @@ def extract_company_name(summary):
             )
             return chat_completion.choices[0].message.content.strip()
         except Exception as e:
-            print(f"Error extracting company name: {e}")
-            time.sleep(RETRY_DELAY)
+            print(f"Error: {e}")
+            wait_time = extract_wait_time(str(e))
+            if wait_time:
+                print(f"Rate limit exceeded. Waiting for {wait_time} seconds before retrying...")
+                time.sleep(wait_time)
+            else:
+                time.sleep(RETRY_DELAY)
     return ""
 
 def load_json_file(file_path):
@@ -590,12 +737,19 @@ def save_json_file(data, file_path):
     except Exception as e:
         print(f"Error saving JSON file: {e}")
 
-def update_company_data(result, results_file='Json_Files/results.json', company_info_file='Json_Files/company_info.json'):
+def update_company_data(result, results_file='Json_Files/results.json', company_info_file='Json_Files/company_info.json', failed_companies_file='Json_Files/failed_companies.json'):
     existing_results = load_json_file(results_file)
     company_info_list = load_json_file(company_info_file)
+    failed_companies = load_json_file(failed_companies_file)
 
     if not result.get("mails"):
         print(f"No emails found for {result.get('company_name')}. Ignored.")
+        # Mise à jour des compagnies ayant échoué
+        failed_companies.append({
+            "company_name": result.get('company_name', ''),
+            "website": result.get('website', '')
+        })
+        save_json_file(failed_companies, failed_companies_file)
         return
 
     company_info = None
@@ -606,6 +760,11 @@ def update_company_data(result, results_file='Json_Files/results.json', company_
 
     if not company_info:
         print(f"No information found for {result.get('company_name')} in company_info.json. Ignored.")
+        failed_companies.append({
+            "company_name": result.get('company_name', ''),
+            "website": result.get('website', '')
+        })
+        save_json_file(failed_companies, failed_companies_file)
         return
 
     final_result = {
@@ -631,23 +790,22 @@ def update_company_data(result, results_file='Json_Files/results.json', company_
     save_json_file(existing_results, results_file)
     print(f"Company information updated for {result.get('company_name')}.")
 
-def main(company_info_file='Json_Files/company_info.json', results_file='Json_Files/results.json', max_pages=20):
+
+async def main(company_info_file='Json_Files/company_info.json', results_file='Json_Files/results.json', max_pages=20):
     company_info = load_company_info(company_info_file)
     
-    # Charger les résultats existants depuis results.json
     existing_results = load_json_file(results_file)
     existing_company_names = {result["company_name"] for result in existing_results}
 
     for company in company_info:
         base_url = company["website"]
         
-        # Vérifier si le nom de la compagnie est déjà présent dans les résultats existants
         if company["company_name"] in existing_company_names:
             print(f"Skipping {company['company_name']} as it already exists in results.")
             continue
 
         print(f"Crawling website: {base_url}")
-        emails, addresses, names, summary_texts = crawl_website(base_url, max_pages)
+        emails, addresses, names, summary_texts = await crawl_website(base_url, max_pages)
 
         max_length = 10000
         merged_text = " ".join(summary_texts)[:max_length]
@@ -656,12 +814,18 @@ def main(company_info_file='Json_Files/company_info.json', results_file='Json_Fi
 
         language = detect_language(merged_text)
 
+        first_summary = True
+
         chunk_size = 2000
         for chunk in chunk_text(merged_text, chunk_size):
             print(f"Text sent to AI (part): {chunk[:chunk_size]}")
             current_summary = generate_summary(chunk, language, current_summary)
             if check_for_info_tag(current_summary):
-                process_information(current_summary, addresses, names)
+                current_summary = current_summary.replace("@info@", "")
+                if first_summary:
+                    company_name = extract_company_name(current_summary)
+                    first_summary = False    
+                process_information(chunk, addresses, names, company_name)
             print(f"Intermediate company summary: {current_summary}")
 
         company_name = extract_company_name(current_summary)
@@ -683,4 +847,4 @@ def main(company_info_file='Json_Files/company_info.json', results_file='Json_Fi
         update_company_data(result)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

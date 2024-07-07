@@ -1,64 +1,53 @@
-# Instructions for Creating the Body of a Cover Letter
+## Response Guidelines
+
+1. Create the body of the cover letter following this structure:
+
+### Greeting:
+- Address the letter to 'Madame' if the recipient is a woman, 'Monsieur' if the recipient is a man, or 'Madame, Monsieur' if the recipient is unknown.
+- **Example**: "Monsieur Dupont," or "Madame, Monsieur,"
+
+### Introduction:
+- Start with a compelling and concise statement.
+- Explain your interest in the position and what drew your attention to the company.
+- Highlight why the company interests you and what makes you a standout candidate.
+- **Example**:
+  "À la recherche d’un nouveau défi professionnel, j’ai été immédiatement attiré par votre entreprise, réputée pour ses solutions technologiques novatrices et son engagement envers l'excellence. Votre vision et votre philosophie de l'innovation correspondent parfaitement à mes valeurs et ambitions personnelles. C'est pourquoi je souhaite mettre mes compétences au service de votre équipe en tant qu'ingénieur logiciel."
+
+### Skills and Experience:
+- Emphasize your most relevant skills and experiences.
+- Maintain a humble yet confident tone.
+- Avoid discussing unrelated experiences.
+- Tailor your experiences to show how you can address the company's specific challenges and opportunities.
+- **Example**:
+  "Fort de plus de 10 ans d'expérience en ingénierie logicielle, notamment chez Tech Innovators en tant qu'ingénieur logiciel senior, j'ai dirigé des équipes de développement et contribué à une augmentation de la productivité de 25%. Mon expertise couvre plusieurs langages de programmation et frameworks modernes, et je suis particulièrement compétent dans la résolution de problèmes complexes. Mon parcours professionnel m'a également permis de développer des compétences pointues en gestion de projets et en développement agile."
+
+### Motivation – What Can We Accomplish Together?:
+- Highlight your motivation and what you can contribute to the company.
+- Discuss how your unique skills and personality will drive the company's success and future growth.
+- **Example**:
+  "J'ai mené des initiatives d'optimisation de processus qui ont considérablement amélioré l'efficacité des équipes de développement. Ces expériences m'ont préparé à relever les défis et à contribuer de manière significative aux projets de votre entreprise. Je suis convaincu que mon savoir-faire technique, allié à ma passion pour l'innovation, me permettra de contribuer efficacement à vos projets technologiques."
+
+### Conclusion:
+- Indicate your availability for further discussion.
+- Express your eagerness to hear from the potential employer.
+- **Examples**:
+  "Je me tiens à votre disposition pour un entretien afin de discuter plus en détail de ma candidature et de mes motivations. Je vous remercie par avance pour l’attention portée à ma demande."
+
+### Closing Salutation:
+- Finish your cover letter with a classic salutation.
+- **Examples**:
+  "Veuillez agréer, Madame, Monsieur, mes meilleures salutations."
+
+2. The response must be in {language}.
+3. You must enclose the entire response in curly braces `{}`.
+
+## Compliance Check
+- Ensure the response strictly follows the above guidelines.
 
 ## Company Information
 - Company Summary: {"summary"}
 
 ## Personal Information
-{profile.txt}
+- Candidate's Profile: {profile.txt}
 
-## Response Guidelines
-
-1. Create the body of the cover letter following this structure:
-   - **Greeting**: Address the letter directly to a specific person if possible. This gives a better impression than the general "Dear Madam/Sir".
-   - **Introduction**: The introduction should spark interest, be concise, and encourage reading the rest. Explain why you are applying for this position, what caught your attention, why the company interests you, and what sets you apart. 
-     - Example: "Looking for a new professional challenge, I came across your company and was impressed by its innovative solutions and commitment to excellence."
-     - Example: "Your company's values and dedication to innovation align perfectly with my own professional goals, and I am excited about the opportunity to contribute to your team."
-   - **Skills and Experience**: Highlight your skills and experiences that are most relevant to the position and the company's needs. Instead of copying your CV, focus on how your background makes you an ideal candidate for the role. Tailor your experiences to demonstrate how you can address the company's specific challenges and opportunities.
-     - Example: "With over 10 years of experience in software engineering, I have developed a robust skill set that includes proficiency in multiple programming languages and modern frameworks. At Tech Innovators, I led development teams and increased productivity by 25%, showcasing my ability to drive efficiency and innovation."
-     - Example: "My role as a Digital Manager at Martin&Cie involved not only technical expertise but also project coordination and strategic planning, which I believe would be beneficial to your company's upcoming projects."
-   - **Motivation – What Can We Accomplish Together?**: Emphasize your motivation and what you can bring to the company. Discuss how your unique skills and personality will contribute to the company's success and future growth.
-     - Example: "I am eager to bring my problem-solving abilities and passion for technology to your team, where I can contribute to developing cutting-edge solutions and driving the company's technological advancements."
-     - Example: "My enthusiasm for innovation and continuous improvement aligns with your company's mission, and I am excited about the potential to make a significant impact on your projects."
-   - **Conclusion**: Indicate your availability for further discussion and express your eagerness to hear from the potential employer.
-     - Example: "I look forward to the opportunity to discuss my application in more detail and am available for an interview at your earliest convenience."
-     - Example: "Thank you for considering my application. I am excited about the prospect of contributing to your team and am available for further discussions or an interview."
-
-2. The response must be in {language}.
-3. You must enclose the entire response in curly braces `{}`.
-
-### Company Information
-- **Company Name**: Tech Innovators
-- **Company Summary**: A leading company specializing in the development of innovative technological solutions. Known for its commitment to excellence and innovation.
-
-### Personal Information
-- **Name**: Paul Martin
-- **Profession**: Software Engineer
-- **Experience**: Over 10 years in software engineering
-- **Previous Experience**: Senior Software Engineer at Tech Innovators
-- **Achievements**: 
-  - Increased productivity by 25%
-  - Proficient in several programming languages and modern frameworks
-  - Expertise in solving complex problems
-  - Project management and agile development
-  - Process optimization initiatives
-- **Motivations**: Passion for technology and innovation, eager to contribute to the company's technological projects.
-
-### Expected Response for French
-Here is the body letter :
-
-{  
-Madame, Monsieur,
-
-À la recherche d’un nouveau défi professionnel, je suis tombé sur votre entreprise, réputée pour ses solutions technologiques innovantes et son engagement envers l'excellence. Votre vision et votre philosophie de l'innovation résonnent parfaitement avec mes propres valeurs et ambitions. C'est pourquoi je souhaiterais mettre mes compétences au service de votre équipe en tant qu'ingénieur logiciel.
-
-Avec plus de 10 ans d'expérience en ingénierie logicielle, notamment chez Tech Innovators en tant qu'ingénieur logiciel senior, j'ai dirigé des équipes de développement et contribué à l'augmentation de la productivité de 25%. Mon expertise couvre plusieurs langages de programmation et frameworks modernes, et je suis particulièrement compétent dans la résolution de problèmes complexes. Mon parcours professionnel m'a également permis de développer des compétences pointues en gestion de projets et en développement agile.
-
-J'ai mené des initiatives d'optimisation de processus qui ont considérablement amélioré l'efficacité des équipes de développement. Ces expériences m'ont préparé à relever les défis et à contribuer de manière significative aux projets de votre entreprise. Je suis convaincu que mon savoir-faire technique, allié à ma passion pour l'innovation, me permettra de contribuer efficacement à vos projets technologiques.
-
-Je me tiens à votre disposition pour un entretien afin de discuter plus en détail de ma candidature et de mes motivations. Je vous remercie par avance pour l’attention portée à ma demande.
-
-Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées
-}
-
-## Compliance Check
-- Ensure the response strictly follows the above guidelines.
+Take a deep breath and work on this problem step-by-step.

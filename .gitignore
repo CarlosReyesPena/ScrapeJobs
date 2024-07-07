@@ -195,3 +195,5 @@ Chromium/user_data_dir/*
 vitisited_links.txt
 
 classified_links.json
+
+token.json
