@@ -1,0 +1,48 @@
+# Recipient Information Guidelines
+
+Create the recipient information following this structure:
+
+## 1. Company Name
+- Use the provided company name
+
+## 2. Full Name
+- Choose the name based on this priority:
+  a) Name with a high hierarchy title such as CEO, Chief, Head... (without the role)
+  b) Name with "HR" or "Human Resources" in the title (without the role)
+  c) The equicalent of "To whom it may concern" in {language} if no appropriate name is found
+
+## 3. Company Address
+- Include the address if available
+- Each part of the address on a separate line
+- Do not include the country
+
+## Specific Instructions
+- Response in {language}
+- Enclose the entire response in curly braces {}
+- 2 to 4 lines in total
+- Remove titles or roles from names
+
+## Example
+### Company Information
+- Company Name: Innovateurs Tech
+- Email Addresses: recrutement@innovateurstech.com, info@innovateurstech.com
+- Company Addresses: 123 Rue de l'Innovation, 1007 Croissant
+- Personal Names: Samuel Ramos, Alex Sanchez
+- Language: French
+
+### Expected Response
+{  
+Innovateurs Tech  
+A qui de droit  
+123 Rue de l'Innovation  
+1007 Croissant 
+}
+
+## Provided Information
+{"company_name"}
+{"personal_names"}
+{"addresses"}
+
+Take a deep breath and work on this problem step-by-step.
+
+Response:

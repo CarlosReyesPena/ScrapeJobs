@@ -85,19 +85,6 @@ def extract_emails_from_mailto_links(mailto_links):
             emails.append(match.group(1))
     return emails
 
-# Fonction pour logger les résultats
-def log_extraction(function_name, input_text, result):
-    log_dir = f'logs/{function_name}'
-    os.makedirs(log_dir, exist_ok=True)
-    existing_logs = len(os.listdir(log_dir))
-    log_file_path = os.path.join(log_dir, f'log_{existing_logs + 1}.txt')
-
-    with open(log_file_path, 'w', encoding='utf-8') as file:
-        file.write("Input Text:\n")
-        file.write(input_text + "\n\n")
-        file.write("Result:\n")
-        file.write(str(result) + "\n")
-
 # Fonction pour capturer les mailto links avec Playwright avec une limite d'essais
 async def capture_mailto_links(url):
     mailto_requests_urls = []

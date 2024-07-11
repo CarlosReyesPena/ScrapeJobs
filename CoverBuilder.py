@@ -9,7 +9,7 @@ import shutil
 import re
 
 RETRY_ATTEMPTS = 20
-RETRY_DELAY = 2
+RETRY_DELAY = 3
 MAX_COMPILATION_ATTEMPTS = 3
 
 # Charger l'API key depuis un fichier
@@ -38,13 +38,15 @@ async def load_results(json_file='Json_Files/results.json'):
 # Fonction pour charger les prompts à partir des fichiers
 async def load_prompts():
     try:
-        async with aiofiles.open('Text_Files/promptcorp.txt', 'r', encoding='utf-8') as file:
-            prompt_corp = await file.read()
-        async with aiofiles.open('Text_Files/promptdestinataire.txt', 'r', encoding='utf-8') as file:
-            prompt_destinataire = await file.read()
+        async with aiofiles.open('Text_Files/promptbody.txt', 'r', encoding='utf-8') as file:
+            prompt_body = await file.read()
+        async with aiofiles.open('Text_Files/promptbody-norecipient.txt', 'r', encoding='utf-8') as file:
+            prompt_body_norecipient = await file.read()
+        async with aiofiles.open('Text_Files/promptrecipient.txt', 'r', encoding='utf-8') as file:
+            prompt_recipient = await file.read()
         async with aiofiles.open('Text_Files/profil.txt', 'r', encoding='utf-8') as file:
             profile_text = await file.read()
-        return prompt_corp, prompt_destinataire, profile_text
+        return prompt_body, prompt_body_norecipient, prompt_recipient , profile_text
     except Exception as e:
         print(f"Error loading prompts: {e}")
         return "", "", "", ""
@@ -78,7 +80,7 @@ def get_final_name(language_code, name):
     return final_name
 
 # Fonction pour remplacer les balises dans le texte du prompt
-def replace_placeholders(prompt_text, company_info, profile_text=None):
+def replace_placeholders(prompt_text, company_info, profile_text=None,SelectedDest=None):
     language_map = {
         "en": "English",
         "fr": "French",
@@ -101,8 +103,10 @@ def replace_placeholders(prompt_text, company_info, profile_text=None):
     prompt_text = prompt_text.replace('{"summary"}', company_info.get("summary", ""))
     prompt_text = prompt_text.replace('{"addresses"}', all_addresses)
     prompt_text = prompt_text.replace('{"personal_names"}', all_personal_names)
+    if SelectedDest != None:
+        prompt_text = prompt_text.replace('{"SelectPerson"}', SelectedDest)
 
-    if profile_text:
+    if profile_text != None:
         prompt_text = prompt_text.replace("{profile.txt}", profile_text)
 
     # Detect language from the summary or default to English
@@ -120,8 +124,8 @@ def extract_text_from_response(response_text):
         return response_text[start+1:end]
     return ""
 
-async def generate_content(company_info, prompt,system_promp="", profile_text=None, is_valid_format=None):
-    base_prompt = replace_placeholders(prompt, company_info, profile_text)
+async def generate_content(company_info, prompt,system_promp="", profile_text=None, is_valid_format=None,SelectedDest=None):
+    base_prompt = replace_placeholders(prompt, company_info, profile_text,SelectedDest)
     messages = [
         {"role": "system", "content": system_promp},
         {"role": "user", "content": base_prompt}
@@ -138,16 +142,10 @@ async def generate_content(company_info, prompt,system_promp="", profile_text=No
             if extracted_text:
                 if is_valid_format is None or is_valid_format(extracted_text):
                     return extracted_text
-            
-            print(f"Invalid format generated: {extracted_text}")
+            raise ValueError(f"Invalid format generated: {extracted_text}")
         except Exception as e:
             print(f"Error: {e}")
-            wait_time = extract_wait_time(str(e))
-            if wait_time:
-                print(f"Rate limit exceeded. Waiting for {wait_time} seconds before retrying...")
-                asyncio.sleep(wait_time)
-            else:
-                asyncio.sleep(RETRY_DELAY)
+            await asyncio.sleep(RETRY_DELAY)
     
     return ""
 
@@ -241,16 +239,41 @@ def set_subject(company_info, language_code):
     subject = subject_template.format(company_name=company_info.get("company_name", ""))
     return subject
 
-async def generate_files(company_info):
+async def generate_files(company_info, recipient_manager):
     print(f"generating files for {company_info['company_name']}...")
 
-    recipient_system = "You are un expert building recipient addresses."
-    body_system = "Act like an expert in professional cover letter writing with over 20 years of experience."
+    recipient_system = "You are an expert building recipient addresses."
+    body_system = "Act like a professional career advisor. You have been helping individuals craft compelling and effective job applications for over 20 years. Your expertise spans various industries, allowing you to tailor advice to specific career paths and organizational cultures."
 
-    prompt_corp, prompt_destinataire, profile_text = await load_prompts()
+    prompt_body, prompt_body_norecipient, promptrecipient, profile_text = await load_prompts()
 
-    corp_content = await generate_content(company_info, prompt_corp,body_system, profile_text)
-    destinataire_content = await generate_content(company_info, prompt_destinataire,recipient_system, profile_text, is_valid_format)
+    destinataire_content = await generate_content(company_info, promptrecipient, recipient_system, profile_text, is_valid_format)
+    
+    # Extrait la deuxième ligne du message
+    lines = destinataire_content.split('\n')
+    NomDest = lines[2] if len(lines) > 2 else ""
+
+    # List of phrases to check against (expand this list as needed)
+    generic_phrases = ["droit", "Concern", "corresponda", "betrifft","competenza"]
+    
+    # Check if NomDest contains any of the generic phrases (case-insensitive)
+    if any(phrase.lower() in NomDest.lower() for phrase in generic_phrases):
+        corp_content = await generate_content(company_info, prompt_body_norecipient, body_system, profile_text, None, "")
+        NomDest = None  # Set to None if it's a generic recipient
+    else:
+        corp_content = await generate_content(company_info, prompt_body, body_system, profile_text, None, NomDest)
+        # Extraire le destinataire de la première ligne non vide du contenu du corps
+        lines = corp_content.split('\n')
+        first_non_empty_line = next((line.strip() for line in lines if line.strip()), "")
+        if first_non_empty_line.endswith(','):
+            NomDest = first_non_empty_line[:-1]  # Enlever la virgule à la fin
+        else:
+            NomDest = first_non_empty_line
+
+    # Update recipient info
+    recipient_manager.update(company_info['company_name'], NomDest)
+    await recipient_manager.save()
+    
     language_code = detect(corp_content)
     sujet_content = set_subject(company_info, language_code)
     
@@ -260,26 +283,60 @@ async def generate_files(company_info):
 
 def is_valid_format(text):
     # Définir une expression régulière pour les caractères non valides
-    invalid_characters = re.compile(r'[!@#$%^&*+=\[\]{}|\\:;"<>?/`~]')
-
-    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    invalid_characters = re.compile(r'[!@#$%^&*+=[\]{}|\\:;"<>?\/`~]')
+    
+    # Supprimer les lignes vides et espaces en début/fin des lignes restantes
+    lines = text.strip().split('\n')
+    
     # Vérifier que le nombre de lignes est entre 2 et 5
     if not (2 <= len(lines) <= 5):
         return False
+    
     for line in lines:
         # Vérifier la longueur de chaque ligne
-        if len(line) > 32:
+        if len(line) > 40:
             return False
         
         if line != lines[0]:
             # Vérifier la présence de caractères non valides
             if invalid_characters.search(line):
                 return False
-
+    
     return True
+
+class RecipientManager:
+    def __init__(self):
+        self.recipients = {}
+        self.file_path = 'Json_Files/recipients.json'
+
+    async def load(self):
+        try:
+            async with aiofiles.open(self.file_path, 'r', encoding='utf-8') as file:
+                self.recipients = json.loads(await file.read())
+        except FileNotFoundError:
+            self.recipients = {}
+        except json.JSONDecodeError:
+            print(f"Error decoding {self.file_path}. Starting with an empty dictionary.")
+            self.recipients = {}
+
+    async def save(self):
+        async with aiofiles.open(self.file_path, 'w', encoding='utf-8') as file:
+            await file.write(json.dumps(self.recipients, ensure_ascii=False, indent=4))
+
+    def update(self, company_name: str, recipient: str):
+        if recipient:
+            self.recipients[company_name] = recipient
+        elif company_name in self.recipients:
+            del self.recipients[company_name]
+
+    def get(self, company_name: str) -> str:
+        return self.recipients.get(company_name)
 
 async def build_covers(json_file='Json_Files/results.json', specific_company_name=None):
     data = await load_results(json_file)
+    recipient_manager = RecipientManager()
+    await recipient_manager.load()
+
     for company_info in data:
         name = company_info["company_name"]
         if specific_company_name and name != specific_company_name:
@@ -289,7 +346,7 @@ async def build_covers(json_file='Json_Files/results.json', specific_company_nam
         name = get_final_name(detect(company_info.get("summary", "")), name)
         
         for attempt in range(MAX_COMPILATION_ATTEMPTS):
-            await generate_files(company_info)
+            await generate_files(company_info, recipient_manager)
             print(f"Fichiers générés pour {name}.")   
             try:
                 await compile_latex(name)

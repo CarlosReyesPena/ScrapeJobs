@@ -197,3 +197,11 @@ vitisited_links.txt
 classified_links.json
 
 token.json
+
+drafts.json
+
+failed_companies.json
+
+database.py
+
+.vscode/*
