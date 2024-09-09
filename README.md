@@ -15,7 +15,6 @@ ScriptJobs is an automation project designed to simplify the job application pro
 - `Mailsender.py`: Manages sending emails to companies.
 - `main.py`: The main entry point that coordinates the entire process.
 - `setup.py`: Contains setup instructions and dependency management.
-- `install_requirements.py`: Script to install Python dependencies and LaTeX for generating the cover letters.
 
 ## Requirements
 
